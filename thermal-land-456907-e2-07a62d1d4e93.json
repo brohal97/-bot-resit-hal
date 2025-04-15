@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "thermal-land-456907-e2",
+  "private_key_id": "07a62d1d4e932a6378761a4c25695b977b314108",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCxy0qjzHjIhr7B\nnP4fjFNdxD12MxgEcFXeO/YgKM3RE5bdd6MtgLLSJEsG4oG8lj3ArahaxHmhejwK\n6IluGFKqZQ0mQRYQrsx3MWrsCMHW8T7EGZ5eXDGXXDK9MtwsInxNC088/kpn7Y64\ncgAs5bJwXOxkMAvbJBfKGSrrA0rY725ZRpFq3swzedaE7LxvuvxYav9WXwzO4p7g\nMcoQ4W7vtMTwTn/w7GBqLeSPFDQEZvaHk10mZGH3QnAWU2jkUJo9Tk6QpzknyXyN\n9WqmH+1+KwziNwdFZKRnHtGpEtMkRPqLwaDO/VK7JkdmVZ7lHM7zpiXl5XOxH9Kc\nBD9n2qjjAgMBAAECggEAEXS+us9QCowkPXkvACT0aG/kgu7oTENFQwELHMQ01PLB\n7LOa21RX+kbi8OWbTEtJ+9lw/pxsvrx0GbQUDjGoKB+sx1U7l965p3g8IbmIYpSk\nD3feczBFFDHSr33HXTPzlVLncDsdTg/mY9iZiM7ykpKlCP8ootbr2QVYj+NuXVcW\noEg+h8brtPA9lJLoSA1XJMNQZVCKQa5TEXaWkIlpnTmrHMMN2XV8Ws6uu9Ly8bnE\nrWEqg9JctZcURfGWBY2VvXWCRHeBOPLeJ885A2J0/aIaFN3ll3/6as1LjHli9/wY\nUZ9VUEaBZTyNFMdAAUZi4Q6vpgFlrVU53hYgoPtMDQKBgQDqSYgieq/9ekdGHPd9\nvcbC95JbHBmvIfG2prRnOoRexNfCQo4Q0TWuGCmUMp13uVwEq1uBo9ZvKuoRQZqU\nWSbhi3Jb3xFmxbxyL7sEbROrLZeML8dC/NTqI4ydtRE9zCxmn1WCzVAz2EzCmjp3\nORoyvFn04aF81099PBiYLCGs1wKBgQDCRXWiHxeIm2Z2rBdYy8oz7G97Zw1YVeMX\ndVxc7JrDtsw1ISmzwN8bLvHFsD6v2mvdviWFQWQDZAQcMHQArhw+Ddpyci0ZSF2k\nT6bNUqGUP9zRpFVe5OVZb0l2BrU8uhrpwI1/9EaWJ02FTSg7rtvz03QHSz217nx6\nPlJkDRO21QKBgQChhxDUtMGhgSyiqlX321+uDAJbzoPmuwBrbYPzp+SbchtPU5Of\nBJ596SrBgiQO5z0J+xqbxtmQy4WVYCWzIcQsvHeb36+fq7TBBSdrZcipvEU/4bD/\n/lDNHLVWBgBdGueB2VibVfJ1zCsgADVO/Y+Sa0maC/XKnKexMD3ErKiLAQKBgG7E\nWeD5J1rteAub7afkckMOwTW0OUivl87NTL9y7H9A38g/Q17JTqxaJOIZrnRn7m69\nNvl2okbIpQtJmSq2G0ZKcc4lSY+L0lCYVbvmLFix3P7vWvnDOv22VUVlZ7rbRfMX\npdZZ+lEs0ad6qcD131VzsElkXig4dWLh2+pOBnqNAoGBAJ+K/Wo99jPbPPZUBXkG\nIF4+RevtmoP1R38JxvfzZpp/TS5LllBW6TNeSoMBenLl4WFiktIt87UgF1cqoH26\nHC5EYgz10iZoYo5Sr9f4P0q06AWZXkTELfjaJOrlgoVNnzQ9bkv41a59XbXq31Ut\neBXuJk/+KiP89LCZ1bDgZlEy\n-----END PRIVATE KEY-----\n",
+  "client_email": "ocr-bot-service@thermal-land-456907-e2.iam.gserviceaccount.com",
+  "client_id": "114643948060161294194",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/ocr-bot-service%40thermal-land-456907-e2.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
