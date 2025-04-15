@@ -1,9 +1,14 @@
 {
-  "ok": true,
-  "result": {
-    "id": 8000296622,
-    "is_bot": true,
-    "first_name": "ResitBot",
-    "username": "Claimresit_bot"
+  "name": "bot-resit-hal",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "dotenv": "^16.0.3",
+    "form-data": "^4.0.0",
+    "node-telegram-bot-api": "^0.61.0"
   }
 }
