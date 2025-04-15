@@ -1,15 +1,15 @@
 {
-  "name": "telegram-ocr-bot",
+  "name": "bot-resit-hal",
   "version": "1.0.0",
+  "description": "Telegram bot + Google Cloud Vision OCR untuk semak resit automatik",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@google-cloud/vision": "^4.4.0",
-    "axios": "^1.6.8",
-    "dotenv": "^16.3.1",
-    "fs": "^0.0.1-security",
-    "node-telegram-bot-api": "^0.61.0"
+    "dotenv": "^16.1.4",
+    "node-telegram-bot-api": "^0.61.0",
+    "@google-cloud/vision": "^3.3.0",
+    "axios": "^1.6.7"
   }
 }
