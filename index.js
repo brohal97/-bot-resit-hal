@@ -5,21 +5,19 @@ const fs = require("fs");
 const path = require("path");
 const vision = require("@google-cloud/vision");
 
-// 📂 Baca fail keyfile.json dari filesystem
-const keyPath = path.join(__dirname, "keyfile.json");
-const credentials = JSON.parse(fs.readFileSync(keyPath, "utf-8"));
+// ✅ Load Google Credentials dari Railway Variable (GOOGLE_CREDENTIALS_JSON)
+const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
 const client = new vision.ImageAnnotatorClient({ credentials });
 
-// 🛡️ Semak token
+// ❗ Check Token
 if (!process.env.BOT_TOKEN) {
-  console.error("❌ BOT_TOKEN tidak dijumpai dalam .env");
+  console.error("❌ BOT_TOKEN tak dijumpai.");
   process.exit(1);
 }
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 console.log("🤖 BOT AKTIF - SEMAK TARIKH GAMBAR");
 
-// 📸 Bila terima gambar
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id.toString();
   if (chatId !== process.env.GROUP_ID) return;
@@ -42,7 +40,7 @@ bot.on("message", async (msg) => {
     });
 
     const [result] = await client.textDetection(localPath);
-    fs.unlinkSync(localPath); // padam fail lepas scan
+    fs.unlinkSync(localPath);
 
     const text = result.fullTextAnnotation ? result.fullTextAnnotation.text : "";
     const dateMatch = text.match(/(\d{1,2}[\-\/\s]\d{1,2}[\-\/\s]\d{2,4})/);
@@ -53,9 +51,8 @@ bot.on("message", async (msg) => {
       bot.sendMessage(chatId, `❌ Tiada tarikh dijumpai dalam gambar.`);
     }
   } catch (err) {
-    console.error("❌ Gagal proses gambar:", err.message);
-    bot.sendMessage(chatId, "❌ Gagal proses gambar.");
+    console.error("❌ Ralat proses gambar:", err.message);
+    bot.sendMessage(chatId, `❌ Gagal proses gambar.\n\n${err.message}`);
   }
 });
-
 
