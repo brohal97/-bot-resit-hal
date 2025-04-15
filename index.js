@@ -1,60 +1,54 @@
-require("dotenv").config();
-const TelegramBot = require("node-telegram-bot-api");
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
-const vision = require("@google-cloud/vision");
-
-// ✅ Guna credentials dari VARIABLE (bukan keyfile)
-const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
-const client = new vision.ImageAnnotatorClient({ credentials });
-
-// 🔐 Token wajib ada
-if (!process.env.BOT_TOKEN) {
-  console.error("❌ BOT_TOKEN tidak dijumpai");
-  process.exit(1);
-}
+require('dotenv').config();
+const TelegramBot = require('node-telegram-bot-api');
+const vision = require('@google-cloud/vision');
+const fs = require('fs');
+const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
-console.log("🤖 BOT AKTIF - SEMAK TARIKH GAMBAR");
 
-bot.on("message", async (msg) => {
-  const chatId = msg.chat.id.toString();
-  if (chatId !== process.env.GROUP_ID) return;
+const client = new vision.ImageAnnotatorClient({
+  keyFilename: './neat-cycling-456917-k5-a69fb15ebab7.json'
+});
 
-  const hasPhoto = msg.photo && msg.photo.length > 0;
-  if (!hasPhoto) return;
+console.log("🤖 BOT AKTIF & MENUNGGU GAMBAR RESIT...");
+
+bot.on('photo', async (msg) => {
+  const chatId = msg.chat.id;
+  const fileId = msg.photo[msg.photo.length - 1].file_id;
 
   try {
-    const fileId = msg.photo[msg.photo.length - 1].file_id;
     const file = await bot.getFile(fileId);
-    const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
-    const localPath = path.join(__dirname, "temp.jpg");
+    const url = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
 
-    const response = await axios.get(fileUrl, { responseType: "stream" });
-    await new Promise((resolve, reject) => {
-      const stream = fs.createWriteStream(localPath);
-      response.data.pipe(stream);
-      stream.on("finish", resolve);
-      stream.on("error", reject);
-    });
+    // Muat turun gambar
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+    fs.writeFileSync('temp.jpg', response.data);
 
-    const [result] = await client.textDetection(localPath);
-    fs.unlinkSync(localPath); // Hapus fail temp
+    // Hantar ke Google Vision OCR
+    const [result] = await client.textDetection('temp.jpg');
+    const detections = result.textAnnotations;
+    const ocrText = detections.length > 0 ? detections[0].description : '';
 
-    const text = result.fullTextAnnotation ? result.fullTextAnnotation.text : "";
-    const dateMatch = text.match(/(\d{1,2}[\-\/\s]\d{1,2}[\-\/\s]\d{2,4})/);
+    console.log("🔍 OCR Result:\n", ocrText);
 
-    if (dateMatch) {
-      bot.sendMessage(chatId, `✅ Tarikh dikesan: *${dateMatch[1]}*`, { parse_mode: "Markdown" });
+    // Semak jika mengandungi tarikh
+    const dateRegex = /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/; // contoh: 13/4/2025
+    const foundDate = ocrText.match(dateRegex);
+
+    if (foundDate) {
+      bot.sendMessage(chatId, `✅ Resit diterima. Tarikh dijumpai: ${foundDate[0]}`);
     } else {
-      bot.sendMessage(chatId, `❌ Tiada tarikh dijumpai dalam gambar.`);
+      bot.sendMessage(chatId, `❌ Resit tidak sah. Tarikh tidak dijumpai.`);
     }
-  } catch (err) {
-    console.error("❌ Ralat semak gambar:", err.message);
-    bot.sendMessage(chatId, "❌ Gagal proses gambar.");
+
+    // Padam fail sementara
+    fs.unlinkSync('temp.jpg');
+  } catch (error) {
+    console.error("❌ Ralat:", error.message);
+    bot.sendMessage(chatId, "⚠️ Ralat berlaku semasa proses OCR.");
   }
 });
+
 
 
 
