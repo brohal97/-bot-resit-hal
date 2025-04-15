@@ -5,13 +5,13 @@ const fs = require("fs");
 const path = require("path");
 const vision = require("@google-cloud/vision");
 
-// ✅ Load Google Credentials dari Railway Variable (GOOGLE_CREDENTIALS_JSON)
-const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
-const client = new vision.ImageAnnotatorClient({ credentials });
+// ✅ Jangan pakai GOOGLE_CREDENTIALS_JSON
+const client = new vision.ImageAnnotatorClient({
+  keyFilename: "keyfile.json"
+});
 
-// ❗ Check Token
 if (!process.env.BOT_TOKEN) {
-  console.error("❌ BOT_TOKEN tak dijumpai.");
+  console.error("❌ BOT_TOKEN tidak dijumpai");
   process.exit(1);
 }
 
@@ -51,8 +51,8 @@ bot.on("message", async (msg) => {
       bot.sendMessage(chatId, `❌ Tiada tarikh dijumpai dalam gambar.`);
     }
   } catch (err) {
-    console.error("❌ Ralat proses gambar:", err.message);
-    bot.sendMessage(chatId, `❌ Gagal proses gambar.\n\n${err.message}`);
+    console.error("❌ Ralat semak gambar:", err.message);
+    bot.sendMessage(chatId, "❌ Gagal proses gambar.");
   }
 });
 
