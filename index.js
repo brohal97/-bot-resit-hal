@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const vision = require("@google-cloud/vision");
 
-// ✅ Jangan pakai GOOGLE_CREDENTIALS_JSON
+// ✅ Pakai fail terus (BUKAN variable!)
 const client = new vision.ImageAnnotatorClient({
   keyFilename: "keyfile.json"
 });
@@ -52,7 +52,8 @@ bot.on("message", async (msg) => {
     }
   } catch (err) {
     console.error("❌ Ralat semak gambar:", err.message);
-    bot.sendMessage(chatId, "❌ Gagal proses gambar.");
+    bot.sendMessage(chatId, `❌ Gagal proses gambar.\n\n${err.message}`);
   }
 });
+
 
