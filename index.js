@@ -5,11 +5,11 @@ const fs = require("fs");
 const path = require("path");
 const vision = require("@google-cloud/vision");
 
-// ✅ Pakai fail terus (BUKAN variable!)
-const client = new vision.ImageAnnotatorClient({
-  keyFilename: "keyfile.json"
-});
+// ✅ Guna credentials dari VARIABLE (bukan keyfile)
+const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+const client = new vision.ImageAnnotatorClient({ credentials });
 
+// 🔐 Token wajib ada
 if (!process.env.BOT_TOKEN) {
   console.error("❌ BOT_TOKEN tidak dijumpai");
   process.exit(1);
@@ -40,7 +40,7 @@ bot.on("message", async (msg) => {
     });
 
     const [result] = await client.textDetection(localPath);
-    fs.unlinkSync(localPath);
+    fs.unlinkSync(localPath); // Hapus fail temp
 
     const text = result.fullTextAnnotation ? result.fullTextAnnotation.text : "";
     const dateMatch = text.match(/(\d{1,2}[\-\/\s]\d{1,2}[\-\/\s]\d{2,4})/);
@@ -52,8 +52,9 @@ bot.on("message", async (msg) => {
     }
   } catch (err) {
     console.error("❌ Ralat semak gambar:", err.message);
-    bot.sendMessage(chatId, `❌ Gagal proses gambar.\n\n${err.message}`);
+    bot.sendMessage(chatId, "❌ Gagal proses gambar.");
   }
 });
+
 
 
