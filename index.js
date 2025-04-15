@@ -5,13 +5,14 @@ const fs = require("fs");
 const path = require("path");
 const vision = require("@google-cloud/vision");
 
-// 🔐 Setup Google Cloud Vision client dari ENV (bukan dari fail)
-const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+// 📂 Baca fail keyfile.json dari filesystem
+const keyPath = path.join(__dirname, "keyfile.json");
+const credentials = JSON.parse(fs.readFileSync(keyPath, "utf-8"));
 const client = new vision.ImageAnnotatorClient({ credentials });
 
-// 🔒 Semak BOT_TOKEN
+// 🛡️ Semak token
 if (!process.env.BOT_TOKEN) {
-  console.error("❌ BOT_TOKEN tidak dijumpai");
+  console.error("❌ BOT_TOKEN tidak dijumpai dalam .env");
   process.exit(1);
 }
 
@@ -41,7 +42,7 @@ bot.on("message", async (msg) => {
     });
 
     const [result] = await client.textDetection(localPath);
-    fs.unlinkSync(localPath); // padam fail selepas OCR
+    fs.unlinkSync(localPath); // padam fail lepas scan
 
     const text = result.fullTextAnnotation ? result.fullTextAnnotation.text : "";
     const dateMatch = text.match(/(\d{1,2}[\-\/\s]\d{1,2}[\-\/\s]\d{2,4})/);
@@ -52,8 +53,9 @@ bot.on("message", async (msg) => {
       bot.sendMessage(chatId, `❌ Tiada tarikh dijumpai dalam gambar.`);
     }
   } catch (err) {
-    console.error("❌ Ralat semak gambar:", err.message);
+    console.error("❌ Gagal proses gambar:", err.message);
     bot.sendMessage(chatId, "❌ Gagal proses gambar.");
   }
 });
+
 
