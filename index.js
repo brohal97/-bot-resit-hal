@@ -5,20 +5,21 @@ const fs = require("fs");
 const path = require("path");
 const FormData = require("form-data");
 
-// Pastikan BOT_TOKEN wujud
 if (!process.env.BOT_TOKEN) {
   console.error("❌ BOT_TOKEN tidak dijumpai dalam .env!");
   process.exit(1);
 }
 
-// Hidupkan bot
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 console.log("🤖 BOT AKTIF - SEMAK TARIKH GAMBAR");
 
-// Bila terima gambar
+// ✅ HEARTBEAT - Kekalkan Railway aktif
+setInterval(() => {
+  console.log("⏳ Bot masih hidup...");
+}, 10000); // setiap 10 saat
+
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id.toString();
-
   if (chatId !== process.env.GROUP_ID) return;
 
   const hasPhoto = msg.photo && msg.photo.length > 0;
@@ -28,7 +29,6 @@ bot.on("message", async (msg) => {
   }
 
   try {
-    // Ambil gambar saiz besar
     const fileId = msg.photo[msg.photo.length - 1].file_id;
     const file = await bot.getFile(fileId);
     const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
@@ -39,7 +39,6 @@ bot.on("message", async (msg) => {
     response.data.pipe(writer);
     await new Promise((resolve) => writer.on("finish", resolve));
 
-    // Hantar ke Mindee OCR
     const form = new FormData();
     form.append("document", fs.createReadStream(localPath));
     const ocr = await axios.post(
@@ -54,7 +53,6 @@ bot.on("message", async (msg) => {
     );
 
     fs.unlinkSync(localPath);
-
     const prediction = ocr.data.document.inference.prediction;
     const ocrDate = prediction.date?.value;
 
