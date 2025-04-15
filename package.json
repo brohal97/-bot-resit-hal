@@ -10,7 +10,7 @@
     "dotenv": "^16.0.3",
     "form-data": "^4.0.0",
     "node-telegram-bot-api": "^0.61.0",
-    "@google-cloud/vision": "^3.3.0"
+    "@google-cloud/vision": "^3.4.0"
   }
 }
 
