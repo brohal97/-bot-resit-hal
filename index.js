@@ -49,20 +49,53 @@ function extractTarikh(text) {
   return null;
 }
 
+// Fungsi semakan RESIT PERBELANJAAN
+function validateResitPerbelanjaan(caption) {
+  const lower = caption.toLowerCase();
+
+  // Cari tarikh
+  const tarikhPattern = /\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})\b/;
+  const hasTarikh = tarikhPattern.test(lower);
+
+  // Cari jumlah RM
+  const jumlahPattern = /rm\s?\d+(\.\d{2})?|\b(total|jumlah|harga)\b/;
+  const hasJumlah = jumlahPattern.test(lower);
+
+  // Cari tujuan
+  const tujuanPattern = /\b(beli|bayar|untuk|sewa|belanja|tuntutan|claim|servis)\b/;
+  const hasTujuan = tujuanPattern.test(lower);
+
+  return hasTarikh && hasJumlah && hasTujuan;
+}
+
 bot.on('photo', async (msg) => {
   const chatId = msg.chat.id;
+
+  // Pastikan ada gambar + caption
+  if (!msg.caption || !msg.photo) {
+    bot.sendMessage(chatId, `❌ Resit tidak sah.\nPastikan gambar dan teks dihantar bersama.`);
+    return;
+  }
+
+  const caption = msg.caption.trim();
+
+  // Semak jika RESIT PERBELANJAAN
+  if (caption.toLowerCase().startsWith("resit perbelanjaan")) {
+    if (!validateResitPerbelanjaan(caption)) {
+      bot.sendMessage(chatId, `❌ Tidak lengkap.\nRESIT PERBELANJAAN wajib ada:\n📆 TARIKH\n🎯 TUJUAN\n💰 TOTAL HARGA`);
+      return;
+    }
+  }
+
   const fileId = msg.photo[msg.photo.length - 1].file_id;
 
   try {
-    // Dapatkan URL gambar dari Telegram
     const file = await bot.getFile(fileId);
     const imageUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
 
-    // Convert image ke base64
     const res = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     const base64Image = Buffer.from(res.data, 'binary').toString('base64');
 
-    // Hantar ke Google Vision OCR API
     const visionRes = await axios.post(
       `https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`,
       {
@@ -83,7 +116,7 @@ bot.on('photo', async (msg) => {
     if (tarikh) {
       bot.sendMessage(chatId, `✅ Resit diterima.\n📆 Tarikh dijumpai: ${tarikh}`);
     } else {
-      bot.sendMessage(chatId, `❌ Resit tidak sah.\nTiada tarikh ditemui.`);
+      bot.sendMessage(chatId, `❌ Resit tidak sah.\nTiada tarikh ditemui dalam gambar.`);
     }
 
   } catch (err) {
