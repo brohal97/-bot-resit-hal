@@ -6,6 +6,40 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 console.log("🤖 BOT AKTIF & MENUNGGU GAMBAR...");
 
+// Fungsi untuk detect tarikh dalam pelbagai format
+function extractTarikh(text) {
+  const bulanMap = {
+    jan: "01", feb: "02", mar: "03", apr: "04",
+    may: "05", jun: "06", jul: "07", aug: "08",
+    sep: "09", oct: "10", nov: "11", dec: "12"
+  };
+
+  // Format: 16/04/2025 atau 16-04-2025
+  let match = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (match) {
+    const [_, d, m, y] = match;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+
+  // Format: 16 Apr 2025
+  match = text.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+  if (match) {
+    const [_, d, b, y] = match;
+    const bulan = bulanMap[b.toLowerCase().slice(0, 3)];
+    if (bulan) return `${y}-${bulan}-${d.padStart(2, '0')}`;
+  }
+
+  // Format: April 16, 2025
+  match = text.match(/([A-Za-z]+)\s+(\d{1,2})[,]?\s+(\d{4})/);
+  if (match) {
+    const [_, b, d, y] = match;
+    const bulan = bulanMap[b.toLowerCase().slice(0, 3)];
+    if (bulan) return `${y}-${bulan}-${d.padStart(2, '0')}`;
+  }
+
+  return null;
+}
+
 bot.on('photo', async (msg) => {
   const chatId = msg.chat.id;
   const fileId = msg.photo[msg.photo.length - 1].file_id;
@@ -35,11 +69,10 @@ bot.on('photo', async (msg) => {
     const text = visionRes.data.responses[0]?.textAnnotations?.[0]?.description || '';
     console.log("📄 OCR Result:\n", text);
 
-    const dateRegex = /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/;
-    const foundDate = text.match(dateRegex);
+    const tarikh = extractTarikh(text);
 
-    if (foundDate) {
-      bot.sendMessage(chatId, `✅ Resit diterima.\n📆 Tarikh dijumpai: ${foundDate[0]}`);
+    if (tarikh) {
+      bot.sendMessage(chatId, `✅ Resit diterima.\n📆 Tarikh dijumpai: ${tarikh}`);
     } else {
       bot.sendMessage(chatId, `❌ Resit tidak sah.\nTiada tarikh ditemui.`);
     }
@@ -49,4 +82,3 @@ bot.on('photo', async (msg) => {
     bot.sendMessage(chatId, `⚠️ Ralat semasa proses OCR.`);
   }
 });
-
