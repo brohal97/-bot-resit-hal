@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config(); 
 const TelegramBot = require('node-telegram-bot-api');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
@@ -12,8 +12,8 @@ function isTarikhValid(line) {
     /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/,
     /\d{1,2}\s+\d{1,2}\s+\d{2,4}/,
     /\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/,
-    /\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i,
-    /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}/i
+    /\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i,
+    /(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}/i
   ];
   return patterns.some(p => p.test(lower));
 }
@@ -111,7 +111,7 @@ bot.on('message', async (msg) => {
 
   const caption = msg.caption || msg.text || '';
   if (!caption.trim() || !msg.photo) {
-    bot.sendMessage(chatId, ❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).);
+    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).");
     return;
   }
 
@@ -119,30 +119,30 @@ bot.on('message', async (msg) => {
 
   if (lower.startsWith('resit perbelanjaan')) {
     if (!validateResitPerbelanjaanFlexible(caption)) {
-      bot.sendMessage(chatId, ❌ Format tidak lengkap.\nRESIT PERBELANJAAN mesti ada:\n📆 Tarikh\n🎯 Tujuan (min 3 perkataan)\n💰 Harga);
+      bot.sendMessage(chatId, "❌ Format tidak lengkap.\nRESIT PERBELANJAAN mesti ada:\n📆 Tarikh\n🎯 Tujuan (min 3 perkataan)\n💰 Harga");
       return;
     }
-    bot.sendMessage(chatId, ✅ Resit diterima. Format lengkap & sah.);
+    bot.sendMessage(chatId, "✅ Resit diterima. Format lengkap & sah.");
     return;
   }
 
   if (lower.startsWith('bayar transport')) {
     if (!validateBayarTransportFormat(caption)) {
-      bot.sendMessage(chatId, ❌ Format BAYAR TRANSPORT tidak sah atau jumlah tidak padan.\nSemak semula harga produk dan jumlah total.);
+      bot.sendMessage(chatId, "❌ Format BAYAR TRANSPORT tidak sah atau jumlah tidak padan.\nSemak semula harga produk dan jumlah total.");
       return;
     }
-    bot.sendMessage(chatId, ✅ Bayar Transport diterima. Jumlah padan & format lengkap.);
+    bot.sendMessage(chatId, "✅ Bayar Transport diterima. Jumlah padan & format lengkap.");
     return;
   }
 
   if (caption.startsWith('BAYAR KOMISEN')) {
     if (!validateBayarKomisenFormat(caption)) {
-      bot.sendMessage(chatId, ❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n💰 Harga RM);
+      bot.sendMessage(chatId, "❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n💰 Harga RM");
       return;
     }
-    bot.sendMessage(chatId, ✅ Bayar Komisen diterima. Format lengkap & sah.);
+    bot.sendMessage(chatId, "✅ Bayar Komisen diterima. Format lengkap & sah.");
     return;
   }
 
-  bot.sendMessage(chatId, ❌ Format tidak dikenali.\nBot hanya terima 'RESIT PERBELANJAAN', 'BAYAR TRANSPORT', dan 'BAYAR KOMISEN' yang sah.);
+  bot.sendMessage(chatId, "❌ Format tidak dikenali.\nBot hanya terima 'RESIT PERBELANJAAN', 'BAYAR TRANSPORT', dan 'BAYAR KOMISEN' yang sah.");
 });
