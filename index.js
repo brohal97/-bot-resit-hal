@@ -5,23 +5,71 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 console.log("🤖 BOT AKTIF & MENUNGGU MESEJ TEKS...");
 
-// Fungsi kesan tarikh dalam mana-mana baris
+// Fungsi kesan tarikh
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
   const patterns = [
-    /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/,                          // 16/4/2025
-    /\d{1,2}\s+\d{1,2}\s+\d{2,4}/,                                // 16 4 2025
-    /\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/,                            // 2025-04-16
+    /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/,
+    /\d{1,2}\s+\d{1,2}\s+\d{2,4}/,
+    /\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/,
     /\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i,
     /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}/i
   ];
   return patterns.some(p => p.test(lower));
 }
 
-// Fungsi semak RESIT PERBELANJAAN – wajib 4 perkara, tapi fleksibel baris
+// Kira jumlah harga RM semua baris kecuali baris 'TOTAL'
+function calculateTotalHargaFromList(lines) {
+  let total = 0;
+  const hargaPattern = /rm\s?(\d+(\.\d{2})?)/i;
+
+  for (let line of lines) {
+    if (/total/i.test(line)) continue;
+    const match = line.match(hargaPattern);
+    if (match) total += parseFloat(match[1]);
+  }
+
+  return total;
+}
+
+// Ambil nilai dari baris TOTAL HARGA
+function extractTotalLineAmount(lines) {
+  const pattern = /total.*rm\s?(\d+(\.\d{2})?)/i;
+  for (let line of lines) {
+    const match = line.match(pattern);
+    if (match) return parseFloat(match[1]);
+  }
+  return null;
+}
+
+// Semakan untuk BAYAR TRANSPORT
+function validateBayarTransportFormat(caption) {
+  const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
+  if (lines.length < 4) return false;
+  if (lines[0].toLowerCase() !== 'bayar transport') return false;
+
+  let adaTarikh = false;
+  let adaProduk = false;
+  let adaTotalLine = false;
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!adaTarikh && isTarikhValid(line)) adaTarikh = true;
+    if (!adaProduk && line.includes('|') && /rm\s?\d+/.test(line.toLowerCase())) adaProduk = true;
+    if (!adaTotalLine && /total.*rm\s?\d+/i.test(line)) adaTotalLine = true;
+  }
+
+  if (!adaTarikh || !adaProduk || !adaTotalLine) return false;
+
+  const kiraTotal = calculateTotalHargaFromList(lines);
+  const totalLine = extractTotalLineAmount(lines);
+
+  return totalLine !== null && Math.abs(kiraTotal - totalLine) < 0.01;
+}
+
+// RESIT PERBELANJAAN (sedia ada)
 function validateResitPerbelanjaanFlexible(caption) {
   const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
-
   if (lines.length < 4) return false;
   if (lines[0].toLowerCase() !== 'resit perbelanjaan') return false;
 
@@ -41,24 +89,32 @@ function validateResitPerbelanjaanFlexible(caption) {
   return adaTarikh && adaJumlah && adaTujuan;
 }
 
+// BOT LISTENER
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   if (!msg.text) return;
 
   const caption = msg.text.trim();
+  const lower = caption.toLowerCase();
 
-  // Semak jika mula dengan RESIT PERBELANJAAN
-  if (caption.toLowerCase().startsWith('resit perbelanjaan')) {
+  if (lower.startsWith('resit perbelanjaan')) {
     if (!validateResitPerbelanjaanFlexible(caption)) {
-      bot.sendMessage(chatId, `❌ Format tidak lengkap.\nMesti ada:\n📆 Tarikh\n🎯 Tujuan (min 3 perkataan)\n💰 Harga RM`);
+      bot.sendMessage(chatId, `❌ Format tidak lengkap.\nRESIT PERBELANJAAN mesti ada:\n📆 Tarikh\n🎯 Tujuan (min 3 perkataan)\n💰 Harga`);
       return;
     }
-
-    bot.sendMessage(chatId, `✅ Resit diterima.\nFormat lengkap dan sah.`);
+    bot.sendMessage(chatId, `✅ Resit diterima. Format lengkap & sah.`);
     return;
   }
 
-  bot.sendMessage(chatId, `❌ Format tidak diterima.\nHanya format 'RESIT PERBELANJAAN' dengan info lengkap dibenarkan.`);
-});
+  if (lower.startsWith('bayar transport')) {
+    if (!validateBayarTransportFormat(caption)) {
+      bot.sendMessage(chatId, `❌ Format BAYAR TRANSPORT tidak sah atau jumlah tidak padan.\nSemak semula harga produk dan jumlah total.`);
+      return;
+    }
+    bot.sendMessage(chatId, `✅ Bayar Transport diterima. Jumlah padan & format lengkap.`);
+    return;
+  }
 
+  bot.sendMessage(chatId, `❌ Format tidak dikenali.\nBot hanya terima 'RESIT PERBELANJAAN' & 'BAYAR TRANSPORT' yang sah.`);
+});
 
