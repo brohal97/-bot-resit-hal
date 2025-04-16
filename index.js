@@ -109,17 +109,12 @@ function validateBayarKomisenFormat(caption) {
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
 
-  // Semak wajib ada gambar
-  const hasPhoto = msg.photo && msg.photo.length > 0;
-  const hasText = msg.text && msg.text.trim().length > 0;
-
-  if (!hasPhoto || !hasText) {
-    bot.sendMessage(chatId, `❌ Tidak sah.
-Wajib hantar SEKALI gambar & teks (dalam satu mesej).`);
+  const caption = msg.caption || msg.text || '';
+  if (!caption.trim() || !msg.photo) {
+    bot.sendMessage(chatId, `❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).`);
     return;
   }
 
-  const caption = msg.text.trim();
   const lower = caption.toLowerCase();
 
   if (lower.startsWith('resit perbelanjaan')) {
@@ -151,3 +146,4 @@ Wajib hantar SEKALI gambar & teks (dalam satu mesej).`);
 
   bot.sendMessage(chatId, `❌ Format tidak dikenali.\nBot hanya terima 'RESIT PERBELANJAAN', 'BAYAR TRANSPORT', dan 'BAYAR KOMISEN' yang sah.`);
 });
+
