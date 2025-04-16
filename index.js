@@ -22,13 +22,11 @@ function isTarikhValid(line) {
 function calculateTotalHargaFromList(lines) {
   let total = 0;
   const hargaPattern = /rm\s?(\d+(\.\d{2})?)/i;
-
   for (let line of lines) {
     if (/total/i.test(line)) continue;
     const match = line.match(hargaPattern);
     if (match) total += parseFloat(match[1]);
   }
-
   return total;
 }
 
@@ -42,7 +40,28 @@ function extractTotalLineAmount(lines) {
   return null;
 }
 
-// Semakan untuk BAYAR TRANSPORT
+// RESIT PERBELANJAAN (flexibel baris, wajib 4 perkara)
+function validateResitPerbelanjaanFlexible(caption) {
+  const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
+  if (lines.length < 4) return false;
+  if (lines[0].toLowerCase() !== 'resit perbelanjaan') return false;
+
+  let adaTarikh = false;
+  let adaJumlah = false;
+  let adaTujuan = false;
+
+  const hargaPattern = /^rm\s?\d+(\.\d{2})?$/i;
+  const tujuanPattern = /\b(beli|bayar|untuk|belanja|sewa|claim|servis)\b/i;
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!adaTarikh && isTarikhValid(lines[i])) adaTarikh = true;
+    if (!adaJumlah && hargaPattern.test(lines[i])) adaJumlah = true;
+    if (!adaTujuan && lines[i].split(' ').length >= 3 && tujuanPattern.test(lines[i])) adaTujuan = true;
+  }
+  return adaTarikh && adaJumlah && adaTujuan;
+}
+
+// BAYAR TRANSPORT
 function validateBayarTransportFormat(caption) {
   const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
   if (lines.length < 4) return false;
@@ -67,26 +86,31 @@ function validateBayarTransportFormat(caption) {
   return totalLine !== null && Math.abs(kiraTotal - totalLine) < 0.01;
 }
 
-// RESIT PERBELANJAAN (sedia ada)
-function validateResitPerbelanjaanFlexible(caption) {
+// BAYAR KOMISEN
+function validateBayarKomisenFormat(caption) {
   const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
   if (lines.length < 4) return false;
-  if (lines[0].toLowerCase() !== 'resit perbelanjaan') return false;
+  if (lines[0] !== 'BAYAR KOMISEN') return false;
 
   let adaTarikh = false;
-  let adaJumlah = false;
-  let adaTujuan = false;
+  let adaNama = false;
+  let adaHarga = false;
+  let adaPerkataanKomisen = false;
+  let adaBank = false;
 
   const hargaPattern = /^rm\s?\d+(\.\d{2})?$/i;
-  const tujuanPattern = /\b(beli|bayar|untuk|belanja|sewa|claim|servis)\b/i;
+  const bankKeywords = ['cimb', 'maybank', 'bank islam', 'rhb', 'bsn', 'ambank', 'public bank', 'bank rakyat', 'affin', 'hsbc', 'uob'];
 
-  for (let i = 1; i < lines.length; i++) {
-    if (!adaTarikh && isTarikhValid(lines[i])) adaTarikh = true;
-    if (!adaJumlah && hargaPattern.test(lines[i])) adaJumlah = true;
-    if (!adaTujuan && lines[i].split(' ').length >= 3 && tujuanPattern.test(lines[i])) adaTujuan = true;
+  for (let line of lines) {
+    const lower = line.toLowerCase();
+    if (!adaTarikh && isTarikhValid(line)) adaTarikh = true;
+    if (!adaNama && line.split(' ').length >= 1 && !lower.includes('rm') && !lower.includes('bank') && !lower.includes('komisen')) adaNama = true;
+    if (!adaHarga && hargaPattern.test(line)) adaHarga = true;
+    if (!adaPerkataanKomisen && lower.includes('komisen')) adaPerkataanKomisen = true;
+    if (!adaBank && bankKeywords.some(b => lower.includes(b))) adaBank = true;
   }
 
-  return adaTarikh && adaJumlah && adaTujuan;
+  return adaTarikh && adaNama && adaHarga && adaPerkataanKomisen && adaBank;
 }
 
 // BOT LISTENER
@@ -115,6 +139,14 @@ bot.on('message', async (msg) => {
     return;
   }
 
-  bot.sendMessage(chatId, `❌ Format tidak dikenali.\nBot hanya terima 'RESIT PERBELANJAAN' & 'BAYAR TRANSPORT' yang sah.`);
-});
+  if (caption.startsWith('BAYAR KOMISEN')) {
+    if (!validateBayarKomisenFormat(caption)) {
+      bot.sendMessage(chatId, `❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n📝 Perkataan 'komisen'\n💰 Harga RM`);
+      return;
+    }
+    bot.sendMessage(chatId, `✅ Bayar Komisen diterima. Format lengkap & sah.`);
+    return;
+  }
 
+  bot.sendMessage(chatId, `❌ Format tidak dikenali.\nBot hanya terima 'RESIT PERBELANJAAN', 'BAYAR TRANSPORT', dan 'BAYAR KOMISEN' yang sah.`);
+});
