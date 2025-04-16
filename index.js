@@ -14,27 +14,36 @@ function extractTarikh(text) {
     sep: "09", oct: "10", nov: "11", dec: "12"
   };
 
-  // Format: 16/04/2025 atau 16-04-2025
+  text = text.toLowerCase();
+
+  // Format 1: 16/04/2025 atau 16-04-2025
   let match = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
   if (match) {
     const [_, d, m, y] = match;
-    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    return `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y.length === 2 ? '20' + y : y}`;
   }
 
-  // Format: 16 Apr 2025
-  match = text.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+  // Format 2: 16 Apr 2025 atau 1 January 2025
+  match = text.match(/(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{4})/i);
   if (match) {
     const [_, d, b, y] = match;
-    const bulan = bulanMap[b.toLowerCase().slice(0, 3)];
-    if (bulan) return `${y}-${bulan}-${d.padStart(2, '0')}`;
+    const bulan = bulanMap[b.slice(0, 3)];
+    if (bulan) return `${d.padStart(2, '0')}-${bulan}-${y}`;
   }
 
-  // Format: April 16, 2025
-  match = text.match(/([A-Za-z]+)\s+(\d{1,2})[,]?\s+(\d{4})/);
+  // Format 3: April 16, 2025
+  match = text.match(/(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\s+(\d{1,2})[,]?\s+(\d{4})/i);
   if (match) {
     const [_, b, d, y] = match;
-    const bulan = bulanMap[b.toLowerCase().slice(0, 3)];
-    if (bulan) return `${y}-${bulan}-${d.padStart(2, '0')}`;
+    const bulan = bulanMap[b.slice(0, 3)];
+    if (bulan) return `${d.padStart(2, '0')}-${bulan}-${y}`;
+  }
+
+  // Format 4: 2025/04/16 atau 2025-04-16
+  match = text.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (match) {
+    const [_, y, m, d] = match;
+    return `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y}`;
   }
 
   return null;
@@ -82,3 +91,4 @@ bot.on('photo', async (msg) => {
     bot.sendMessage(chatId, `⚠️ Ralat semasa proses OCR.`);
   }
 });
+
