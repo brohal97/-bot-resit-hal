@@ -36,7 +36,82 @@ function detectJenisDokumen(text) {
   return 'lain';
 }
 
-// ... fungsi validateResitPerbelanjaanFlexible, validateBayarTransportFormat, validateBayarKomisenFormat kekal seperti sebelum ini
+function validateResitPerbelanjaanFlexible(caption) {
+  const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
+  if (lines.length < 4) return false;
+  if (lines[0].toLowerCase() !== 'resit perbelanjaan') return false;
+
+  let adaTarikh = false;
+  let adaJumlah = false;
+  let adaTujuan = false;
+
+  const hargaPattern = /^rm\s?\d+(\.\d{2})?$/i;
+  const tujuanPattern = /\b(beli|bayar|untuk|belanja|sewa|claim|servis)\b/i;
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!adaTarikh && isTarikhValid(lines[i])) adaTarikh = true;
+    if (!adaJumlah && hargaPattern.test(lines[i])) adaJumlah = true;
+    if (!adaTujuan && lines[i].split(' ').length >= 3 && tujuanPattern.test(lines[i])) adaTujuan = true;
+  }
+  return adaTarikh && adaJumlah && adaTujuan;
+}
+
+function validateBayarTransportFormat(caption) {
+  const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
+  if (lines.length < 4) return false;
+  if (lines[0].toLowerCase() !== 'bayar transport') return false;
+
+  let adaTarikh = false;
+  let adaProduk = false;
+  let adaTotalLine = false;
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!adaTarikh && isTarikhValid(line)) adaTarikh = true;
+    if (!adaProduk && line.includes('|') && /rm\s?\d+/.test(line.toLowerCase())) adaProduk = true;
+    if (!adaTotalLine && /total.*rm\s?\d+/i.test(line)) adaTotalLine = true;
+  }
+
+  if (!adaTarikh || !adaProduk || !adaTotalLine) return false;
+
+  const totalLine = lines.find(line => /total.*rm\s?\d+/i.test(line));
+  const kiraTotal = lines.reduce((sum, line) => {
+    if (!/total/i.test(line)) {
+      const match = line.match(/rm\s?(\d+(\.\d{2})?)/i);
+      if (match) sum += parseFloat(match[1]);
+    }
+    return sum;
+  }, 0);
+
+  const matchTotal = totalLine?.match(/rm\s?(\d+(\.\d{2})?)/i);
+  const jumlahTotal = matchTotal ? parseFloat(matchTotal[1]) : 0;
+
+  return Math.abs(kiraTotal - jumlahTotal) < 0.01;
+}
+
+function validateBayarKomisenFormat(caption) {
+  const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
+  if (lines.length < 4) return false;
+  if (lines[0] !== 'BAYAR KOMISEN') return false;
+
+  let adaTarikh = false;
+  let adaNama = false;
+  let adaHarga = false;
+  let adaBank = false;
+
+  const hargaPattern = /^rm\s?\d+(\.\d{2})?$/i;
+  const bankKeywords = ['cimb', 'maybank', 'bank islam', 'rhb', 'bsn', 'ambank', 'public bank', 'bank rakyat', 'affin', 'hsbc', 'uob'];
+
+  for (let line of lines) {
+    const lower = line.toLowerCase();
+    if (!adaTarikh && isTarikhValid(line)) adaTarikh = true;
+    if (!adaNama && line.split(' ').length >= 1 && !lower.includes('rm') && !lower.includes('bank')) adaNama = true;
+    if (!adaHarga && hargaPattern.test(line)) adaHarga = true;
+    if (!adaBank && bankKeywords.some(b => lower.includes(b))) adaBank = true;
+  }
+
+  return adaTarikh && adaNama && adaHarga && adaBank;
+}
 
 bot.on('photo', async (msg) => {
   const chatId = msg.chat.id;
@@ -47,8 +122,8 @@ bot.on('photo', async (msg) => {
   }
 
   const lower = caption.toLowerCase();
-
   const fileId = msg.photo[msg.photo.length - 1].file_id;
+
   try {
     const file = await bot.getFile(fileId);
     const imageUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
@@ -108,7 +183,6 @@ bot.on('photo', async (msg) => {
     }
 
     bot.sendMessage(chatId, `❌ Format tidak dikenali.\nBot hanya terima 'RESIT PERBELANJAAN', 'BAYAR TRANSPORT', dan 'BAYAR KOMISEN' yang sah.`);
-
   } catch (err) {
     console.error("❌ Ralat OCR:", err.response?.data || err.message);
     bot.sendMessage(chatId, `⚠️ Ralat semasa semakan gambar. Sila cuba semula.`);
