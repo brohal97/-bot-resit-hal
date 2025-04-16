@@ -18,7 +18,6 @@ function isTarikhValid(line) {
   return patterns.some(p => p.test(lower));
 }
 
-// Kira jumlah harga RM semua baris kecuali baris 'TOTAL'
 function calculateTotalHargaFromList(lines) {
   let total = 0;
   const hargaPattern = /rm\s?(\d+(\.\d{2})?)/i;
@@ -30,7 +29,6 @@ function calculateTotalHargaFromList(lines) {
   return total;
 }
 
-// Ambil nilai dari baris TOTAL HARGA
 function extractTotalLineAmount(lines) {
   const pattern = /total.*rm\s?(\d+(\.\d{2})?)/i;
   for (let line of lines) {
@@ -40,7 +38,6 @@ function extractTotalLineAmount(lines) {
   return null;
 }
 
-// RESIT PERBELANJAAN (flexibel baris, wajib 4 perkara)
 function validateResitPerbelanjaanFlexible(caption) {
   const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
   if (lines.length < 4) return false;
@@ -61,7 +58,6 @@ function validateResitPerbelanjaanFlexible(caption) {
   return adaTarikh && adaJumlah && adaTujuan;
 }
 
-// BAYAR TRANSPORT
 function validateBayarTransportFormat(caption) {
   const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
   if (lines.length < 4) return false;
@@ -86,7 +82,6 @@ function validateBayarTransportFormat(caption) {
   return totalLine !== null && Math.abs(kiraTotal - totalLine) < 0.01;
 }
 
-// BAYAR KOMISEN
 function validateBayarKomisenFormat(caption) {
   const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
   if (lines.length < 4) return false;
@@ -95,7 +90,6 @@ function validateBayarKomisenFormat(caption) {
   let adaTarikh = false;
   let adaNama = false;
   let adaHarga = false;
-  let adaPerkataanKomisen = false;
   let adaBank = false;
 
   const hargaPattern = /^rm\s?\d+(\.\d{2})?$/i;
@@ -104,16 +98,14 @@ function validateBayarKomisenFormat(caption) {
   for (let line of lines) {
     const lower = line.toLowerCase();
     if (!adaTarikh && isTarikhValid(line)) adaTarikh = true;
-    if (!adaNama && line.split(' ').length >= 1 && !lower.includes('rm') && !lower.includes('bank') && !lower.includes('komisen')) adaNama = true;
+    if (!adaNama && line.split(' ').length >= 1 && !lower.includes('rm') && !lower.includes('bank')) adaNama = true;
     if (!adaHarga && hargaPattern.test(line)) adaHarga = true;
-    if (!adaPerkataanKomisen && lower.includes('komisen')) adaPerkataanKomisen = true;
     if (!adaBank && bankKeywords.some(b => lower.includes(b))) adaBank = true;
   }
 
-  return adaTarikh && adaNama && adaHarga && adaPerkataanKomisen && adaBank;
+  return adaTarikh && adaNama && adaHarga && adaBank;
 }
 
-// BOT LISTENER
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   if (!msg.text) return;
@@ -141,7 +133,7 @@ bot.on('message', async (msg) => {
 
   if (caption.startsWith('BAYAR KOMISEN')) {
     if (!validateBayarKomisenFormat(caption)) {
-      bot.sendMessage(chatId, `❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n📝 Perkataan 'komisen'\n💰 Harga RM`);
+      bot.sendMessage(chatId, `❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n💰 Harga RM`);
       return;
     }
     bot.sendMessage(chatId, `✅ Bayar Komisen diterima. Format lengkap & sah.`);
