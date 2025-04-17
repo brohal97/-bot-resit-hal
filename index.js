@@ -1,4 +1,4 @@
-// ===================== INDEX.JS (Gabungan Penuh) =====================
+// ✅ INDEX.JS FINAL - Gabungan fungsi asal + semakan OCR terasing + logic penuh
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -7,7 +7,6 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 console.log("🤖 BOT AKTIF & MENUNGGU MESEJ TEKS...");
 
-// ========== FUNGSI SEDIA ADA DATO ========== (TIDAK DIUSIK)
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
   const patterns = [
@@ -76,10 +75,12 @@ function validateBayarTransportFormat(caption) {
     if (!adaTotalLine && /total.*rm\s?\d+/i.test(line)) adaTotalLine = true;
   }
 
+  if (!adaTarikh || !adaProduk || !adaTotalLine) return false;
+
   const kiraTotal = calculateTotalHargaFromList(lines);
   const totalLine = extractTotalLineAmount(lines);
 
-  return adaTarikh && adaProduk && adaTotalLine && Math.abs(kiraTotal - totalLine) < 0.01;
+  return totalLine !== null && Math.abs(kiraTotal - totalLine) < 0.01;
 }
 
 function validateBayarKomisenFormat(caption) {
@@ -106,69 +107,119 @@ function validateBayarKomisenFormat(caption) {
   return adaTarikh && adaNama && adaHarga && adaBank;
 }
 
-// ========== PENERIMA MESEJ ==========
-bot.on('message', async (msg) => {
-  const chatId = msg.chat.id;
-  const caption = msg.caption || msg.text || '';
-  if (!caption.trim() || !msg.photo) return;
+function isJumlahTerasingDenganJarak(ocrText, target) {
+  const lines = ocrText.split('\n');
+  const targetStr = target.toFixed(2);
+  const targetRaw = target.toString();
 
-  const rmValues = extractRMValuesFromCaption(caption);
-  if (rmValues.length === 0) return;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
 
-  try {
-    const fileId = msg.photo[msg.photo.length - 1].file_id;
-    const fileLink = await bot.getFileLink(fileId);
-
-    const downloadImageAsBase64 = async (url) => {
-      const response = await axios.get(url, { responseType: 'arraybuffer' });
-      return Buffer.from(response.data, 'binary').toString('base64');
-    };
-
-    const base64Image = await downloadImageAsBase64(fileLink.href);
-
-    const ocrRes = await axios.post(`https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`, {
-      requests: [{
-        image: { content: base64Image },
-        features: [{ type: "TEXT_DETECTION" }]
-      }]
-    });
-
-    const ocrText = ocrRes.data.responses[0].fullTextAnnotation?.text || "";
-
-    for (let value of rmValues) {
-      const angka = parseFloat(value);
-      if (!isAngkaBersendirian(ocrText, angka)) {
-        await bot.sendMessage(chatId, `❌ Gagal. Angka "${angka}" tidak bersendirian atau terlalu dekat dengan perkataan/nombor lain.`);
-        return;
-      }
+    if (line === targetRaw || line === `RM${targetStr}` || line === `rm${targetStr}`) {
+      return true;
     }
 
-    await bot.sendMessage(chatId, "✅ Resit diterima. Format & angka RM dalam gambar adalah sah.");
-  } catch (err) {
-    console.error("OCR Error:", err.message);
-    console.log("FULL ERROR:", err.response?.data || err);
-    await bot.sendMessage(chatId, "❌ Gagal membaca teks dari gambar (OCR). Pastikan gambar jelas.");
-  }
-});
+    const prevLine = lines[i - 1] ? lines[i - 1].trim() : '';
+    const nextLine = lines[i + 1] ? lines[i + 1].trim() : '';
 
-// ========== FUNGSI TAMBAHAN (TIDAK GANGGU FUNGSI ASAL) ==========
-function extractRMValuesFromCaption(caption) {
-  const pattern = /rm\s?(\d+(\.\d{1,2})?)/gi;
-  const matches = [];
-  let match;
-  while ((match = pattern.exec(caption)) !== null) {
-    matches.push(match[1]);
-  }
-  return matches;
-}
+    if ((line.includes(targetRaw) || line.includes(`RM${targetStr}`)) &&
+        !line.includes(' ') &&
+        !prevLine.includes(targetRaw) &&
+        !nextLine.includes(targetRaw)) {
+      return true;
+    }
 
-function isAngkaBersendirian(text, targetNumber) {
-  const lines = text.split('\n').map(line => line.trim());
-  const regex = new RegExp(`(^|\s{5,})${targetNumber}(\s{5,}|$)`, 'g');
-  for (const line of lines) {
-    if (new RegExp(`rm\s?${targetNumber}`, 'i').test(line)) continue;
-    if (regex.test(line)) return true;
+    const regex = new RegExp(`(?:^|\s)(rm\s?)?${targetRaw}(?=\s|$)`, 'i');
+    const match = line.match(regex);
+    if (match) {
+      const index = line.indexOf(match[0]);
+      const before = line.slice(0, index);
+      const after = line.slice(index + match[0].length);
+
+      const isJarakSebelum = before.match(/\s{5,}$/);
+      const isJarakSelepas = after.match(/^\s{5,}/);
+
+      const jarakSebelumLulus = before === '' || isJarakSebelum;
+      const jarakSelepasLulus = after === '' || isJarakSelepas;
+
+      if (jarakSebelumLulus || jarakSelepasLulus) {
+        return true;
+      }
+    }
   }
   return false;
 }
+
+bot.on('message', async (msg) => {
+  const chatId = msg.chat.id;
+  const caption = msg.caption || msg.text || '';
+
+  if (!caption.trim() || !msg.photo) {
+    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).");
+    return;
+  }
+
+  const lower = caption.toLowerCase();
+
+  if (lower.startsWith('resit perbelanjaan')) {
+    if (!validateResitPerbelanjaanFlexible(caption)) {
+      bot.sendMessage(chatId, "❌ Format tidak lengkap.\nRESIT PERBELANJAAN mesti ada:\n📆 Tarikh\n🎯 Tujuan (min 3 perkataan)\n💰 Harga");
+      return;
+    }
+  }
+
+  if (lower.startsWith('bayar transport')) {
+    if (!validateBayarTransportFormat(caption)) {
+      bot.sendMessage(chatId, "❌ Format BAYAR TRANSPORT tidak sah atau jumlah tidak padan.\nSemak semula harga produk dan jumlah total.");
+      return;
+    }
+  }
+
+  if (lower.startsWith('bayar komisen')) {
+    if (!validateBayarKomisenFormat(caption)) {
+      bot.sendMessage(chatId, "❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n💰 Harga RM");
+      return;
+    }
+  }
+
+  if (msg.photo) {
+    try {
+      const fileId = msg.photo[msg.photo.length - 1].file_id;
+      const file = await bot.getFile(fileId);
+      const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+      const res = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+      const base64Image = Buffer.from(res.data).toString('base64');
+
+      const visionRes = await axios.post(
+        `https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`,
+        {
+          requests: [
+            {
+              image: { content: base64Image },
+              features: [{ type: 'TEXT_DETECTION' }]
+            }
+          ]
+        }
+      );
+
+      const ocrText = visionRes.data.responses[0]?.textAnnotations?.[0]?.description || '';
+      const captionLines = caption.split('\n');
+      const captionTotal = calculateTotalHargaFromList(captionLines);
+
+      if (!isJumlahTerasingDenganJarak(ocrText, captionTotal)) {
+        bot.sendMessage(chatId, `❌ RM${captionTotal} terlalu rapat atau bercampur dengan angka/perkataan lain dalam gambar.`);
+        return;
+      } else {
+        bot.sendMessage(chatId, `✅ RM${captionTotal} disahkan berada dalam baris selamat.`);
+      }
+
+    } catch (error) {
+      console.error("❌ Ralat semasa OCR:", error.message);
+      bot.sendMessage(chatId, "⚠️ Ralat semasa semakan gambar. Gambar mungkin kabur atau tiada teks.");
+      return;
+    }
+  }
+
+  bot.sendMessage(chatId, "✅ Semakan selesai. Jika anda tidak menerima mesej ralat, data anda telah lulus semakan awal.");
+});
 
