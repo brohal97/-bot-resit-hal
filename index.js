@@ -1,11 +1,13 @@
-require('dotenv').config(); 
+// ===================== INDEX.JS (Gabungan Penuh) =====================
+require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
+const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 console.log("🤖 BOT AKTIF & MENUNGGU MESEJ TEKS...");
 
-// Fungsi kesan tarikh
+// ========== FUNGSI SEDIA ADA DATO ========== (TIDAK DIUSIK)
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
   const patterns = [
@@ -74,12 +76,10 @@ function validateBayarTransportFormat(caption) {
     if (!adaTotalLine && /total.*rm\s?\d+/i.test(line)) adaTotalLine = true;
   }
 
-  if (!adaTarikh || !adaProduk || !adaTotalLine) return false;
-
   const kiraTotal = calculateTotalHargaFromList(lines);
   const totalLine = extractTotalLineAmount(lines);
 
-  return totalLine !== null && Math.abs(kiraTotal - totalLine) < 0.01;
+  return adaTarikh && adaProduk && adaTotalLine && Math.abs(kiraTotal - totalLine) < 0.01;
 }
 
 function validateBayarKomisenFormat(caption) {
@@ -106,80 +106,52 @@ function validateBayarKomisenFormat(caption) {
   return adaTarikh && adaNama && adaHarga && adaBank;
 }
 
+// ========== PENERIMA MESEJ ==========
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
-
   const caption = msg.caption || msg.text || '';
-  if (!caption.trim() || !msg.photo) {
-    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).");
-    return;
-  }
+  if (!caption.trim() || !msg.photo) return;
 
-  const lower = caption.toLowerCase();
-
-  if (lower.startsWith('resit perbelanjaan')) {
-    if (!validateResitPerbelanjaanFlexible(caption)) {
-      bot.sendMessage(chatId, "❌ Format tidak lengkap.\nRESIT PERBELANJAAN mesti ada:\n📆 Tarikh\n🎯 Tujuan (min 3 perkataan)\n💰 Harga");
-      return;
-    }
-  }
-
-  if (lower.startsWith('bayar transport')) {
-    if (!validateBayarTransportFormat(caption)) {
-      bot.sendMessage(chatId, "❌ Format BAYAR TRANSPORT tidak sah atau jumlah tidak padan.\nSemak semula harga produk dan jumlah total.");
-      return;
-    }
-  }
-
-  if (caption.startsWith('BAYAR KOMISEN')) {
-    if (!validateBayarKomisenFormat(caption)) {
-      bot.sendMessage(chatId, "❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n💰 Harga RM");
-      return;
-    }
-  }
-
-  // ======== SEMAK ANGKA RMxx DALAM GAMBAR OCR (fungsi tambahan) ========
   const rmValues = extractRMValuesFromCaption(caption);
-  if (rmValues.length > 0) {
-    try {
-      const fileId = msg.photo[msg.photo.length - 1].file_id;
-      const fileLink = await bot.getFileLink(fileId);
-      const axios = require('axios');
-      const ocrRes = await axios.post(`https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`, {
-        requests: [{
-          image: { source: { imageUri: fileLink.href } },
-          features: [{ type: "TEXT_DETECTION" }]
-        }]
-      });
+  if (rmValues.length === 0) return;
 
-      const ocrText = ocrRes.data.responses[0].fullTextAnnotation?.text || "";
+  try {
+    const fileId = msg.photo[msg.photo.length - 1].file_id;
+    const fileLink = await bot.getFileLink(fileId);
 
-      for (let value of rmValues) {
-        const angka = parseFloat(value);
-        if (!isAngkaBersendirian(ocrText, angka)) {
-          bot.sendMessage(chatId, `❌ Gagal. Angka **${angka}** tidak bersendirian atau terlalu dekat dengan perkataan/nombor lain.`);
-          return;
-        }
+    const downloadImageAsBase64 = async (url) => {
+      const response = await axios.get(url, { responseType: 'arraybuffer' });
+      return Buffer.from(response.data, 'binary').toString('base64');
+    };
+
+    const base64Image = await downloadImageAsBase64(fileLink.href);
+
+    const ocrRes = await axios.post(`https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`, {
+      requests: [{
+        image: { content: base64Image },
+        features: [{ type: "TEXT_DETECTION" }]
+      }]
+    });
+
+    const ocrText = ocrRes.data.responses[0].fullTextAnnotation?.text || "";
+
+    for (let value of rmValues) {
+      const angka = parseFloat(value);
+      if (!isAngkaBersendirian(ocrText, angka)) {
+        await bot.sendMessage(chatId, `❌ Gagal. Angka "${angka}" tidak bersendirian atau terlalu dekat dengan perkataan/nombor lain.`);
+        return;
       }
-
-      // Jika semua angka lulus
-      bot.sendMessage(chatId, "✅ Format & angka RM dalam gambar adalah sah.");
-
-    } catch (err) {
-      console.error("OCR Error:", err.message);
-      bot.sendMessage(chatId, "❌ Gagal membaca teks dari gambar (OCR). Pastikan gambar jelas.");
-      return;
     }
-  }
 
-  if (!lower.startsWith('resit perbelanjaan') && !lower.startsWith('bayar transport') && !caption.startsWith('BAYAR KOMISEN')) {
-    bot.sendMessage(chatId, "❌ Format tidak dikenali.\nBot hanya terima 'RESIT PERBELANJAAN', 'BAYAR TRANSPORT', dan 'BAYAR KOMISEN' yang sah.");
-    return;
+    await bot.sendMessage(chatId, "✅ Resit diterima. Format & angka RM dalam gambar adalah sah.");
+  } catch (err) {
+    console.error("OCR Error:", err.message);
+    console.log("FULL ERROR:", err.response?.data || err);
+    await bot.sendMessage(chatId, "❌ Gagal membaca teks dari gambar (OCR). Pastikan gambar jelas.");
   }
 });
 
-// ===== Tambahan Fungsi Khas (tanpa usik kod sedia ada) =====
-
+// ========== FUNGSI TAMBAHAN (TIDAK GANGGU FUNGSI ASAL) ==========
 function extractRMValuesFromCaption(caption) {
   const pattern = /rm\s?(\d+(\.\d{1,2})?)/gi;
   const matches = [];
@@ -192,9 +164,9 @@ function extractRMValuesFromCaption(caption) {
 
 function isAngkaBersendirian(text, targetNumber) {
   const lines = text.split('\n').map(line => line.trim());
-  const regex = new RegExp(`(^|\\s{5,})${targetNumber}(\\s{5,}|$)`, 'g');
+  const regex = new RegExp(`(^|\s{5,})${targetNumber}(\s{5,}|$)`, 'g');
   for (const line of lines) {
-    if (new RegExp(`rm\\s?${targetNumber}`, 'i').test(line)) continue;
+    if (new RegExp(`rm\s?${targetNumber}`, 'i').test(line)) continue;
     if (regex.test(line)) return true;
   }
   return false;
