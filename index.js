@@ -1,5 +1,4 @@
-// ✅ INDEX.JS TERKINI: Versi ketat + semak jumlah betul-betul terasing sahaja
-
+// ✅ FINAL: Skrip bersih, terkunci & deploy-ready ✅
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -10,12 +9,29 @@ function isTarikhValid(line) {
   const lower = line.toLowerCase();
   const patterns = [
     /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/,
-    /\d{1,2}\s+\d{1,2}\s+\d{2,4}/,
     /\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/,
     /\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}/i,
     /(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{4}/i
   ];
   return patterns.some(p => p.test(lower));
+}
+
+function calculateTotalHargaFromList(lines) {
+  let total = 0;
+  const hargaPattern = /rm\s?(\d+(\.\d{2})?)/i;
+  for (let line of lines) {
+    if (/total/i.test(line)) continue;
+    const match = line.match(hargaPattern);
+    if (match) total += parseFloat(match[1]);
+  }
+  return total;
+}
+
+function isJumlahBetulTerasing(ocrText, captionTotal) {
+  const lines = ocrText.split('\n');
+  const target = parseFloat(captionTotal).toFixed(2);
+  const pattern = new RegExp(`^(\s*)(RM|MYR)?\s*${target}(\s*)$`, 'i');
+  return lines.some(line => pattern.test(line.trim()));
 }
 
 function extractTarikhList(text) {
@@ -51,33 +67,12 @@ function normalisasiTarikhList(list) {
   });
 }
 
-function calculateTotalHargaFromList(lines) {
-  let total = 0;
-  const hargaPattern = /rm\s?(\d+(\.\d{2})?)/i;
-  for (let line of lines) {
-    if (/total/i.test(line)) continue;
-    const match = line.match(hargaPattern);
-    if (match) total += parseFloat(match[1]);
-  }
-  return total;
-}
-
-function isJumlahBetulTerasing(ocrText, captionTotal) {
-  const lines = ocrText.split('\n');
-  const target = parseFloat(captionTotal).toFixed(2); // contoh: 80.00
-  const pattern = new RegExp(`^(\s*)(RM|MYR)?\s*${target}(\s*)$`, 'i');
-
-  return lines.some(line => {
-    const clean = line.trim();
-    return pattern.test(clean);
-  });
-}
-
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const caption = msg.caption || msg.text || '';
+
   if (!caption.trim() || !msg.photo) {
-    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).”);
+    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).");
     return;
   }
 
@@ -122,10 +117,9 @@ bot.on('message', async (msg) => {
     }
 
     bot.sendMessage(chatId, `✅ Gambar disahkan: Tarikh, Jumlah & Format lengkap.`);
+
   } catch (error) {
     console.error("❌ Ralat semasa OCR:", error.message);
     bot.sendMessage(chatId, "⚠️ Ralat semasa semakan gambar. Gambar mungkin kabur atau tiada teks.");
   }
 });
-
-
