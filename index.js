@@ -106,16 +106,81 @@ function validateBayarKomisenFormat(caption) {
   return adaTarikh && adaNama && adaHarga && adaBank;
 }
 
+// Fungsi OCR (Smart Jumlah Matching)
+function getJumlahDariBarisTotalOnly(ocrText) {
+  const lines = ocrText.toLowerCase().split('\n');
+  for (let line of lines) {
+    if (line.includes('total') && /rm\s?\d+/.test(line)) {
+      const match = line.match(/rm\s?(\d+(\.\d{2})?)/i);
+      if (match) return parseFloat(match[1]);
+    }
+  }
+  return null;
+}
+
+function getFallbackJumlahOCR(ocrText) {
+  const pattern = /rm\s?(\d+(\.\d{2})?)/gi;
+  let match;
+  const amounts = [];
+  while ((match = pattern.exec(ocrText.toLowerCase())) !== null) {
+    amounts.push(parseFloat(match[1]));
+  }
+  return amounts.length ? Math.max(...amounts) : null;
+}
+
+function getJumlahOCRSmart(ocrText) {
+  const totalLine = getJumlahDariBarisTotalOnly(ocrText);
+  if (totalLine !== null) return totalLine;
+  return getFallbackJumlahOCR(ocrText);
+}
+
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
-
   const caption = msg.caption || msg.text || '';
+
   if (!caption.trim() || !msg.photo) {
     bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).\n");
     return;
   }
 
   const lower = caption.toLowerCase();
+
+  if (msg.photo) {
+    try {
+      const fileId = msg.photo[msg.photo.length - 1].file_id;
+      const file = await bot.getFile(fileId);
+      const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+      const res = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+      const base64Image = Buffer.from(res.data).toString('base64');
+
+      const visionRes = await axios.post(
+        `https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`,
+        {
+          requests: [
+            {
+              image: { content: base64Image },
+              features: [{ type: 'TEXT_DETECTION' }]
+            }
+          ]
+        }
+      );
+
+      const ocrText = visionRes.data.responses[0]?.textAnnotations?.[0]?.description || '';
+      const jumlahOCR = getJumlahOCRSmart(ocrText);
+      const jumlahCaption = calculateTotalHargaFromList(caption.split('\n'));
+
+      if (Math.abs(jumlahOCR - jumlahCaption) > 0.01) {
+        bot.sendMessage(chatId, `❌ Jumlah dalam gambar (OCR) tidak sepadan dengan jumlah dalam caption.\n📷 OCR: RM${jumlahOCR.toFixed(2)}\n📝 Caption: RM${jumlahCaption.toFixed(2)}`);
+        return;
+      } else {
+        bot.sendMessage(chatId, `✅ Jumlah Gambar & Caption disahkan sepadan. (RM${jumlahOCR.toFixed(2)})`);
+      }
+    } catch (error) {
+      console.error("❌ Ralat semasa OCR:", error.message);
+      bot.sendMessage(chatId, "⚠️ Ralat semasa semakan gambar. Gambar mungkin kabur atau tiada teks.");
+      return;
+    }
+  }
 
   if (lower.startsWith('resit perbelanjaan')) {
     if (!validateResitPerbelanjaanFlexible(caption)) {
