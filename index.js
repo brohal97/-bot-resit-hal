@@ -1,4 +1,4 @@
-// ✅ INDEX.JS PENUH: versi terbaru dengan semakan jumlah OCR lebih fleksibel
+// ✅ INDEX.JS VERSI PENUH - Fix untuk RM dengan koma, contoh RM5,300.00
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -108,7 +108,7 @@ function validateBayarKomisenFormat(caption) {
 }
 
 function isJumlahTerasingDenganJarak(ocrText, target) {
-  const lines = ocrText.split('\n');
+  const lines = ocrText.replace(/,/g, '').split('\n');
   const targetStr = target.toFixed(2);
   const targetRaw = target.toString();
 
@@ -119,11 +119,10 @@ function isJumlahTerasingDenganJarak(ocrText, target) {
       return true;
     }
 
-    if (line.match(new RegExp(`(Amount|RM)?\s{0,5}${targetRaw}\s*$`, 'i'))) {
+    if (line.match(new RegExp(`(Amount)?\s*(RM\s?)?${targetRaw}\.?0{0,2}\s*$`, 'i'))) {
       return true;
     }
   }
-
   return false;
 }
 
