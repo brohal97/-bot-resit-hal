@@ -1,8 +1,4 @@
-// ✅ INDEX.JS PENUH dengan semua logik OCR terkini:
-// - Sokong RM/MYR
-// - Tarikh 2 digit automatik jadi 2025
-// - Padanan normalisasi tarikh caption vs OCR
-
+// ✅ INDEX.JS PENUH – Digabung semua fungsi asal + semakan OCR jumlah + semakan tarikh padan
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -67,6 +63,74 @@ function calculateTotalHargaFromList(lines) {
   return total;
 }
 
+function validateResitPerbelanjaanFlexible(caption) {
+  const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
+  if (lines.length < 4) return false;
+  if (lines[0].toLowerCase() !== 'resit perbelanjaan') return false;
+
+  let adaTarikh = false;
+  let adaJumlah = false;
+  let adaTujuan = false;
+
+  const hargaPattern = /^rm\s?\d+(\.\d{2})?$/i;
+  const tujuanPattern = /\b(beli|bayar|untuk|belanja|sewa|claim|servis)\b/i;
+
+  for (let i = 1; i < lines.length; i++) {
+    if (!adaTarikh && isTarikhValid(lines[i])) adaTarikh = true;
+    if (!adaJumlah && hargaPattern.test(lines[i])) adaJumlah = true;
+    if (!adaTujuan && lines[i].split(' ').length >= 3 && tujuanPattern.test(lines[i])) adaTujuan = true;
+  }
+  return adaTarikh && adaJumlah && adaTujuan;
+}
+
+function validateBayarKomisenFormat(caption) {
+  const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
+  if (lines.length < 4) return false;
+  if (lines[0] !== 'BAYAR KOMISEN') return false;
+
+  let adaTarikh = false;
+  let adaNama = false;
+  let adaHarga = false;
+  let adaBank = false;
+
+  const hargaPattern = /^rm\s?\d+(\.\d{2})?$/i;
+  const bankKeywords = ['cimb', 'maybank', 'bank islam', 'rhb', 'bsn', 'ambank', 'public bank', 'bank rakyat', 'affin', 'hsbc', 'uob'];
+
+  for (let line of lines) {
+    const lower = line.toLowerCase();
+    if (!adaTarikh && isTarikhValid(line)) adaTarikh = true;
+    if (!adaNama && line.split(' ').length >= 1 && !lower.includes('rm') && !lower.includes('bank')) adaNama = true;
+    if (!adaHarga && hargaPattern.test(line)) adaHarga = true;
+    if (!adaBank && bankKeywords.some(b => lower.includes(b))) adaBank = true;
+  }
+
+  return adaTarikh && adaNama && adaHarga && adaBank;
+}
+
+function validateBayarTransportFormat(caption) {
+  const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
+  if (lines.length < 4) return false;
+  if (lines[0].toLowerCase() !== 'bayar transport') return false;
+
+  let adaTarikh = false;
+  let adaProduk = false;
+  let adaTotalLine = false;
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!adaTarikh && isTarikhValid(line)) adaTarikh = true;
+    if (!adaProduk && line.includes('|') && /rm\s?\d+/.test(line.toLowerCase())) adaProduk = true;
+    if (!adaTotalLine && /total.*rm\s?\d+/i.test(line)) adaTotalLine = true;
+  }
+
+  if (!adaTarikh || !adaProduk || !adaTotalLine) return false;
+
+  const kiraTotal = calculateTotalHargaFromList(lines);
+  const totalLine = kiraTotal;
+
+  return totalLine !== null && Math.abs(kiraTotal - totalLine) < 0.01;
+}
+
 function isJumlahTerasingDenganJarak(ocrText, target) {
   const lines = ocrText.replace(/,/g, '').split('\n');
   const targetStr = target.toFixed(2);
@@ -120,7 +184,7 @@ bot.on('message', async (msg) => {
 
     const ocrText = visionRes.data.responses[0]?.textAnnotations?.[0]?.description || '';
 
-    // TARIKH
+    // TARIKH SEMAKAN
     const tarikhOCR = normalisasiTarikhList(extractTarikhList(ocrText));
     const tarikhCaption = normalisasiTarikhList(extractTarikhList(caption));
 
@@ -133,13 +197,28 @@ bot.on('message', async (msg) => {
       return;
     }
 
-    // JUMLAH
+    // JUMLAH SEMAKAN
     if (!isJumlahTerasingDenganJarak(ocrText, captionTotal)) {
       bot.sendMessage(chatId, `❌ RM${captionTotal} terlalu rapat atau bercampur dengan angka/perkataan lain dalam gambar.`);
       return;
     }
 
-    bot.sendMessage(chatId, `✅ Gambar disahkan: Tarikh & Jumlah padan sempurna.`);
+    // SEMAK FORMAT KHAS
+    if (caption.toLowerCase().startsWith('resit perbelanjaan') && !validateResitPerbelanjaanFlexible(caption)) {
+      bot.sendMessage(chatId, "❌ Format tidak lengkap.\nRESIT PERBELANJAAN mesti ada:\n📆 Tarikh\n🎯 Tujuan (min 3 perkataan)\n💰 Harga");
+      return;
+    }
+    if (caption.toLowerCase().startsWith('bayar transport') && !validateBayarTransportFormat(caption)) {
+      bot.sendMessage(chatId, "❌ Format BAYAR TRANSPORT tidak sah atau jumlah tidak padan.\nSemak semula harga produk dan jumlah total.");
+      return;
+    }
+    if (caption.toLowerCase().startsWith('bayar komisen') && !validateBayarKomisenFormat(caption)) {
+      bot.sendMessage(chatId, "❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n💰 Harga RM");
+      return;
+    }
+
+    // LULUS
+    bot.sendMessage(chatId, `✅ Gambar disahkan: Tarikh, Jumlah & Format lengkap.`);
 
   } catch (error) {
     console.error("❌ Ralat semasa OCR:", error.message);
