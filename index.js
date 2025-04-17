@@ -139,4 +139,3 @@ with ZipFile(fixed_zip_path, "w") as zipf:
     zipf.writestr(".env.example", "BOT_TOKEN=\nVISION_API_KEY=\n")
 
 fixed_zip_path
-
