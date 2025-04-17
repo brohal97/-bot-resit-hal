@@ -1,4 +1,8 @@
-// ✅ INDEX.JS PENUH: OCR jumlah + MYR + semak tarikh padan dengan normalisasi
+// ✅ INDEX.JS PENUH dengan semua logik OCR terkini:
+// - Sokong RM/MYR
+// - Tarikh 2 digit automatik jadi 2025
+// - Padanan normalisasi tarikh caption vs OCR
+
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -39,12 +43,14 @@ function normalisasiTarikhList(list) {
     const cleaned = t.toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
     if (cleaned.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/)) {
       const [d, m, y] = cleaned.split(/[\/\-]/);
-      return `${String(d).padStart(2, '0')}-${String(m).padStart(2, '0')}-${y}`;
+      const year = y.length === 2 ? `20${y}` : y;
+      return `${String(d).padStart(2, '0')}-${String(m).padStart(2, '0')}-${year}`;
     }
-    if (cleaned.match(/\d{1,2}\s+[a-z]+\s+\d{4}/)) {
+    if (cleaned.match(/\d{1,2}\s+[a-z]+\s+\d{2,4}/)) {
       const [d, month, y] = cleaned.split(' ');
       const map = { jan:'01', feb:'02', mac:'03', apr:'04', may:'05', jun:'06', jul:'07', aug:'08', sep:'09', oct:'10', nov:'11', dec:'12' };
-      return `${String(d).padStart(2, '0')}-${map[month.slice(0,3)]}-${y}`;
+      const year = y.length === 2 ? `20${y}` : y;
+      return `${String(d).padStart(2, '0')}-${map[month.slice(0,3)]}-${year}`;
     }
     return cleaned;
   });
@@ -114,7 +120,7 @@ bot.on('message', async (msg) => {
 
     const ocrText = visionRes.data.responses[0]?.textAnnotations?.[0]?.description || '';
 
-    // Tarikh Matching
+    // TARIKH
     const tarikhOCR = normalisasiTarikhList(extractTarikhList(ocrText));
     const tarikhCaption = normalisasiTarikhList(extractTarikhList(caption));
 
@@ -127,7 +133,7 @@ bot.on('message', async (msg) => {
       return;
     }
 
-    // Jumlah Matching
+    // JUMLAH
     if (!isJumlahTerasingDenganJarak(ocrText, captionTotal)) {
       bot.sendMessage(chatId, `❌ RM${captionTotal} terlalu rapat atau bercampur dengan angka/perkataan lain dalam gambar.`);
       return;
@@ -140,5 +146,4 @@ bot.on('message', async (msg) => {
     bot.sendMessage(chatId, "⚠️ Ralat semasa semakan gambar. Gambar mungkin kabur atau tiada teks.");
   }
 });
-
 
