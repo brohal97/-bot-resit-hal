@@ -1,5 +1,4 @@
-
-// ✅ FINAL KOMBINASI: Tarikh, Jumlah, Spacing, RM/MYR prefix – Confirm padu
+// ✅ FINAL KOMBINASI (Fix RegExp): Tarikh, Jumlah, Spacing, RM/MYR prefix – Confirm padu
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -67,7 +66,7 @@ function isAngkaBerdiriSendiri(ocrText, targetNumber) {
 
   for (let line of lines) {
     const clean = line.trim().toLowerCase();
-    const pattern = new RegExp(`\b(rm|myr)?\s*${target}\b`, 'i');
+    const pattern = new RegExp(`\\b(rm|myr)?\\s*${target}\\b`, 'i');
     if (pattern.test(clean)) return true;
   }
   return false;
@@ -77,7 +76,7 @@ bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const caption = msg.caption || msg.text || '';
   if (!caption.trim() || !msg.photo) {
-    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).");
+    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).”);
     return;
   }
 
