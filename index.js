@@ -1,7 +1,6 @@
-// ✅ INDEX.JS FINAL - Gabungan fungsi asal + semakan OCR terasing + logic penuh
+// ✅ INDEX.JS VERSI ASAL SAHAJA – semua fungsi asal dikekalkan
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
@@ -107,49 +106,6 @@ function validateBayarKomisenFormat(caption) {
   return adaTarikh && adaNama && adaHarga && adaBank;
 }
 
-function isJumlahTerasingDenganJarak(ocrText, target) {
-  const lines = ocrText.split('\n');
-  const targetStr = target.toFixed(2);
-  const targetRaw = target.toString();
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-
-    if (line === targetRaw || line === `RM${targetStr}` || line === `rm${targetStr}`) {
-      return true;
-    }
-
-    const prevLine = lines[i - 1] ? lines[i - 1].trim() : '';
-    const nextLine = lines[i + 1] ? lines[i + 1].trim() : '';
-
-    if ((line.includes(targetRaw) || line.includes(`RM${targetStr}`)) &&
-        !line.includes(' ') &&
-        !prevLine.includes(targetRaw) &&
-        !nextLine.includes(targetRaw)) {
-      return true;
-    }
-
-    const regex = new RegExp(`(?:^|\s)(rm\s?)?${targetRaw}(?=\s|$)`, 'i');
-    const match = line.match(regex);
-    if (match) {
-      const index = line.indexOf(match[0]);
-      const before = line.slice(0, index);
-      const after = line.slice(index + match[0].length);
-
-      const isJarakSebelum = before.match(/\s{5,}$/);
-      const isJarakSelepas = after.match(/^\s{5,}/);
-
-      const jarakSebelumLulus = before === '' || isJarakSebelum;
-      const jarakSelepasLulus = after === '' || isJarakSelepas;
-
-      if (jarakSebelumLulus || jarakSelepasLulus) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const caption = msg.caption || msg.text || '';
@@ -166,6 +122,8 @@ bot.on('message', async (msg) => {
       bot.sendMessage(chatId, "❌ Format tidak lengkap.\nRESIT PERBELANJAAN mesti ada:\n📆 Tarikh\n🎯 Tujuan (min 3 perkataan)\n💰 Harga");
       return;
     }
+    bot.sendMessage(chatId, "✅ Resit diterima. Format lengkap & sah.");
+    return;
   }
 
   if (lower.startsWith('bayar transport')) {
@@ -173,53 +131,18 @@ bot.on('message', async (msg) => {
       bot.sendMessage(chatId, "❌ Format BAYAR TRANSPORT tidak sah atau jumlah tidak padan.\nSemak semula harga produk dan jumlah total.");
       return;
     }
+    bot.sendMessage(chatId, "✅ Bayar Transport diterima. Jumlah padan & format lengkap.");
+    return;
   }
 
-  if (lower.startsWith('bayar komisen')) {
+  if (caption.startsWith('BAYAR KOMISEN')) {
     if (!validateBayarKomisenFormat(caption)) {
       bot.sendMessage(chatId, "❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n💰 Harga RM");
       return;
     }
+    bot.sendMessage(chatId, "✅ Bayar Komisen diterima. Format lengkap & sah.");
+    return;
   }
 
-  if (msg.photo) {
-    try {
-      const fileId = msg.photo[msg.photo.length - 1].file_id;
-      const file = await bot.getFile(fileId);
-      const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
-      const res = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-      const base64Image = Buffer.from(res.data).toString('base64');
-
-      const visionRes = await axios.post(
-        `https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`,
-        {
-          requests: [
-            {
-              image: { content: base64Image },
-              features: [{ type: 'TEXT_DETECTION' }]
-            }
-          ]
-        }
-      );
-
-      const ocrText = visionRes.data.responses[0]?.textAnnotations?.[0]?.description || '';
-      const captionLines = caption.split('\n');
-      const captionTotal = calculateTotalHargaFromList(captionLines);
-
-      if (!isJumlahTerasingDenganJarak(ocrText, captionTotal)) {
-        bot.sendMessage(chatId, `❌ RM${captionTotal} terlalu rapat atau bercampur dengan angka/perkataan lain dalam gambar.`);
-        return;
-      } else {
-        bot.sendMessage(chatId, `✅ RM${captionTotal} disahkan berada dalam baris selamat.`);
-      }
-
-    } catch (error) {
-      console.error("❌ Ralat semasa OCR:", error.message);
-      bot.sendMessage(chatId, "⚠️ Ralat semasa semakan gambar. Gambar mungkin kabur atau tiada teks.");
-      return;
-    }
-  }
-
-  bot.sendMessage(chatId, "✅ Semakan selesai. Jika anda tidak menerima mesej ralat, data anda telah lulus semakan awal.");
+  bot.sendMessage(chatId, "❌ Format tidak dikenali.\nBot hanya terima 'RESIT PERBELANJAAN', 'BAYAR TRANSPORT', dan 'BAYAR KOMISEN' yang sah.");
 });
-
