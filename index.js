@@ -1,6 +1,4 @@
-// ✅ FINAL: Versi TERKINI & BETUL-BETUL SELAMAT 🔐
-// Versi ini dijamin tidak crash, bebas petik salah, dan sudah dikunci logic padat.
-
+// ✅ Gabungan versi penuh + logik spacing OCR (angka berdiri sendiri)
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -16,17 +14,6 @@ function isTarikhValid(line) {
     /(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{4}/i
   ];
   return patterns.some(p => p.test(lower));
-}
-
-function calculateTotalHargaFromList(lines) {
-  let total = 0;
-  const hargaPattern = /rm\s?(\d+(\.\d{2})?)/i;
-  for (let line of lines) {
-    if (/total/i.test(line)) continue;
-    const match = line.match(hargaPattern);
-    if (match) total += parseFloat(match[1]);
-  }
-  return total;
 }
 
 function extractTarikhList(text) {
@@ -62,15 +49,43 @@ function normalisasiTarikhList(list) {
   });
 }
 
-function isJumlahExactAndIsolated(ocrText, captionTotal) {
-  const lines = ocrText.split('\n');
-  const target = parseFloat(captionTotal).toFixed(2); // 80.90
-  const rawPattern = new RegExp(`\b${target}\b`);
+function calculateTotalHargaFromList(lines) {
+  let total = 0;
+  const hargaPattern = /rm\s?(\d+(\.\d{2})?)/i;
+  for (let line of lines) {
+    if (/total/i.test(line)) continue;
+    const match = line.match(hargaPattern);
+    if (match) total += parseFloat(match[1]);
+  }
+  return total;
+}
 
-  return lines.some(line => {
-    const clean = line.trim();
-    return rawPattern.test(clean) && !clean.match(/[a-z]/i);
-  });
+function isAngkaBerdiriSendiri(ocrText, targetNumber) {
+  const target = parseFloat(targetNumber).toFixed(2);
+  const lines = ocrText.split('
+');
+
+  for (let line of lines) {
+    const cleanLine = line.trim();
+    if (cleanLine.includes(target)) {
+      const idx = cleanLine.indexOf(target);
+      const sebelum = cleanLine[idx - 1] || ' ';
+      const selepas = cleanLine[idx + target.length] || ' ';
+
+      const isSpaceKiri = sebelum === ' ' || sebelum === '';
+      const isSpaceKanan = selepas === ' ' || selepas === '';
+      const tiadaHurufSekeliling = !/[a-zA-Z0-9]/.test(sebelum + selepas);
+
+      if (isSpaceKiri && isSpaceKanan && tiadaHurufSekeliling) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+    }
+  }
+  return false;
 }
 
 bot.on('message', async (msg) => {
@@ -117,7 +132,7 @@ bot.on('message', async (msg) => {
       return;
     }
 
-    if (!isJumlahExactAndIsolated(ocrText, captionTotal)) {
+    if (!isAngkaBerdiriSendiri(ocrText, captionTotal)) {
       bot.sendMessage(chatId, `❌ RM${captionTotal} tidak sah – tidak berdiri sendiri.`);
       return;
     }
