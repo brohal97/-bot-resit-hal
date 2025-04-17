@@ -1,4 +1,6 @@
-// ✅ INDEX.JS PENUH – Digabung semua fungsi asal + semakan OCR jumlah + semakan tarikh padan
+// ✅ INDEX.JS PENUH: Tambah semula SEMAKAN FORMAT RESIT, KOMISEN, TRANSPORT
+// Termasuk semakan OCR jumlah, tarikh, normalisasi, dan format wajib
+
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -103,7 +105,6 @@ function validateBayarKomisenFormat(caption) {
     if (!adaHarga && hargaPattern.test(line)) adaHarga = true;
     if (!adaBank && bankKeywords.some(b => lower.includes(b))) adaBank = true;
   }
-
   return adaTarikh && adaNama && adaHarga && adaBank;
 }
 
@@ -184,7 +185,6 @@ bot.on('message', async (msg) => {
 
     const ocrText = visionRes.data.responses[0]?.textAnnotations?.[0]?.description || '';
 
-    // TARIKH SEMAKAN
     const tarikhOCR = normalisasiTarikhList(extractTarikhList(ocrText));
     const tarikhCaption = normalisasiTarikhList(extractTarikhList(caption));
 
@@ -197,27 +197,26 @@ bot.on('message', async (msg) => {
       return;
     }
 
-    // JUMLAH SEMAKAN
     if (!isJumlahTerasingDenganJarak(ocrText, captionTotal)) {
       bot.sendMessage(chatId, `❌ RM${captionTotal} terlalu rapat atau bercampur dengan angka/perkataan lain dalam gambar.`);
       return;
     }
 
-    // SEMAK FORMAT KHAS
     if (caption.toLowerCase().startsWith('resit perbelanjaan') && !validateResitPerbelanjaanFlexible(caption)) {
       bot.sendMessage(chatId, "❌ Format tidak lengkap.\nRESIT PERBELANJAAN mesti ada:\n📆 Tarikh\n🎯 Tujuan (min 3 perkataan)\n💰 Harga");
       return;
     }
+
     if (caption.toLowerCase().startsWith('bayar transport') && !validateBayarTransportFormat(caption)) {
       bot.sendMessage(chatId, "❌ Format BAYAR TRANSPORT tidak sah atau jumlah tidak padan.\nSemak semula harga produk dan jumlah total.");
       return;
     }
+
     if (caption.toLowerCase().startsWith('bayar komisen') && !validateBayarKomisenFormat(caption)) {
       bot.sendMessage(chatId, "❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n💰 Harga RM");
       return;
     }
 
-    // LULUS
     bot.sendMessage(chatId, `✅ Gambar disahkan: Tarikh, Jumlah & Format lengkap.`);
 
   } catch (error) {
