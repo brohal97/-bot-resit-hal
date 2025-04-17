@@ -1,4 +1,5 @@
-// ✅ FINAL: Skrip bersih, terkunci & deploy-ready ✅
+// ✅ INDEX.JS FINAL LOCKED (v2) – Versi terakhir dengan semakan jumlah isolated sepenuhnya
+
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -25,13 +26,6 @@ function calculateTotalHargaFromList(lines) {
     if (match) total += parseFloat(match[1]);
   }
   return total;
-}
-
-function isJumlahBetulTerasing(ocrText, captionTotal) {
-  const lines = ocrText.split('\n');
-  const target = parseFloat(captionTotal).toFixed(2);
-  const pattern = new RegExp(`^(\s*)(RM|MYR)?\s*${target}(\s*)$`, 'i');
-  return lines.some(line => pattern.test(line.trim()));
 }
 
 function extractTarikhList(text) {
@@ -67,12 +61,23 @@ function normalisasiTarikhList(list) {
   });
 }
 
+function isJumlahExactAndIsolated(ocrText, captionTotal) {
+  const lines = ocrText.split('\n');
+  const target = parseFloat(captionTotal).toFixed(2); // contoh: 80.90
+  const rawPattern = new RegExp(`\b${target}\b`);
+
+  return lines.some(line => {
+    const clean = line.trim();
+    return rawPattern.test(clean) && !clean.match(/[a-z]/i); // tiada huruf bercampur
+  });
+}
+
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const caption = msg.caption || msg.text || '';
 
   if (!caption.trim() || !msg.photo) {
-    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).");
+    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).”);
     return;
   }
 
@@ -111,7 +116,7 @@ bot.on('message', async (msg) => {
       return;
     }
 
-    if (!isJumlahBetulTerasing(ocrText, captionTotal)) {
+    if (!isJumlahExactAndIsolated(ocrText, captionTotal)) {
       bot.sendMessage(chatId, `❌ RM${captionTotal} tidak sah – tidak berdiri sendiri.`);
       return;
     }
