@@ -1,4 +1,3 @@
-// 🤖 BOT TELEGRAM - SCAN & BALAS TEKS PENUH GAMBAR RESIT (MarkdownV2 Safe)
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -20,7 +19,6 @@ bot.on('message', async (msg) => {
     const res = await axios.get(fileUrl, { responseType: 'arraybuffer' });
     const base64Image = Buffer.from(res.data).toString('base64');
 
-    // Google Vision OCR API
     const visionRes = await axios.post(
       `https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`,
       {
@@ -36,22 +34,16 @@ bot.on('message', async (msg) => {
     const ocrText = visionRes.data.responses[0]?.textAnnotations?.[0]?.description || '';
 
     if (!ocrText.trim()) {
-      bot.sendMessage(chatId, "⚠️ Gambar tiada teks dikesan.");
+      bot.sendMessage(chatId, "⚠️ Gambar tidak mengandungi teks yang boleh dibaca.");
       return;
     }
 
-    // Escape simbol untuk MarkdownV2
-    const escapedText = ocrText.replace(/([*_`\[\]()~>#+=|{}.!-])/g, '\$1');
-
-    // Balas isi OCR dalam format kemas
-    bot.sendMessage(chatId, "📄 *Isi Penuh Resit Dikesan:*
-
-```" + escapedText + "```", {
-      parse_mode: "MarkdownV2"
-    });
+    // Jawapan tanpa format markdown
+    bot.sendMessage(chatId, "📄 Isi Penuh Resit Dikesan:\n\n" + ocrText);
 
   } catch (error) {
-    console.error("❌ Ralat OCR:", error.message);
-    bot.sendMessage(chatId, "❌ Ralat semasa baca gambar. Pastikan gambar jelas & berisi teks.");
+    console.error("❌ Ralat semasa proses OCR:", error.message);
+    bot.sendMessage(chatId, "❌ Ralat semasa baca gambar. Pastikan gambar jelas dan berisi teks.");
   }
 });
+
