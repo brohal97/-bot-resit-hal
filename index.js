@@ -1,4 +1,4 @@
-// ✅ INDEX.JS VERSI PENUH - Fix untuk RM dengan koma, contoh RM5,300.00
+// ✅ INDEX.JS PENUH dengan fix RM + MYR support (OCR logik lebih pintar)
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -115,11 +115,17 @@ function isJumlahTerasingDenganJarak(ocrText, target) {
   for (let line of lines) {
     const clean = line.trim();
 
-    if (clean === targetRaw || clean === `RM${targetStr}` || clean === `rm${targetStr}`) {
+    if (
+      clean === targetRaw ||
+      clean === `RM${targetStr}` ||
+      clean === `rm${targetStr}` ||
+      clean === `MYR${targetStr}` ||
+      clean === `myr${targetStr}`
+    ) {
       return true;
     }
 
-    if (line.match(new RegExp(`(Amount)?\s*(RM\s?)?${targetRaw}\.?0{0,2}\s*$`, 'i'))) {
+    if (line.match(new RegExp(`(Amount|RM|MYR)?\s{0,5}${targetRaw}\.?0{0,2}\s*$`, 'i'))) {
       return true;
     }
   }
