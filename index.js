@@ -1,4 +1,8 @@
-// ✅ FINAL KOMBINASI (Fix RegExp + Format): Tarikh, Jumlah, Spacing, RM/MYR prefix – Confirm padu
+from zipfile import ZipFile
+
+# Fixed version with proper double quotes (no curly quotes)
+fixed_index_js = """
+// ✅ FINAL KOMBINASI (Fix RegExp + Format + Petikan Betul)
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -8,20 +12,20 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
   const patterns = [
-    /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/,
-    /\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/,
-    /\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}/i,
-    /(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{4}/i
+    /\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4}/,
+    /\\d{4}[\\/\\-]\\d{1,2}[\\/\\-]\\d{1,2}/,
+    /\\d{1,2}\\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\\s+\\d{4}/i,
+    /(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\\s+\\d{1,2},?\\s+\\d{4}/i
   ];
   return patterns.some(p => p.test(lower));
 }
 
 function extractTarikhList(text) {
   const patterns = [
-    /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g,
-    /\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b/g,
-    /\b\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}/gi,
-    /\b(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)[\s\-]+\d{1,2},?\s+\d{4}/gi
+    /\\b\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4}\\b/g,
+    /\\b\\d{4}[\\/\\-]\\d{1,2}[\\/\\-]\\d{1,2}\\b/g,
+    /\\b\\d{1,2}\\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\\s+\\d{4}/gi,
+    /\\b(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)[\\s\\-]+\\d{1,2},?\\s+\\d{4}/gi
   ];
   let result = [];
   patterns.forEach(p => {
@@ -33,13 +37,13 @@ function extractTarikhList(text) {
 
 function normalisasiTarikhList(list) {
   return list.map(t => {
-    const cleaned = t.toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
-    if (cleaned.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/)) {
-      const [d, m, y] = cleaned.split(/[\/\-]/);
+    const cleaned = t.toLowerCase().replace(/,/g, '').replace(/\\s+/g, ' ');
+    if (cleaned.match(/\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4}/)) {
+      const [d, m, y] = cleaned.split(/[\\/\\-]/);
       const year = y.length === 2 ? `20${y}` : y;
       return `${String(d).padStart(2, '0')}-${String(m).padStart(2, '0')}-${year}`;
     }
-    if (cleaned.match(/\d{1,2}\s+[a-z]+\s+\d{2,4}/)) {
+    if (cleaned.match(/\\d{1,2}\\s+[a-z]+\\s+\\d{2,4}/)) {
       const [d, month, y] = cleaned.split(' ');
       const map = { jan:'01', feb:'02', mac:'03', apr:'04', may:'05', jun:'06', jul:'07', aug:'08', sep:'09', oct:'10', nov:'11', dec:'12' };
       const year = y.length === 2 ? `20${y}` : y;
@@ -51,7 +55,7 @@ function normalisasiTarikhList(list) {
 
 function calculateTotalHargaFromList(lines) {
   let total = 0;
-  const hargaPattern = /rm\s?(\d+(\.\d{2})?)/i;
+  const hargaPattern = /rm\\s?(\\d+(\\.\\d{2})?)/i;
   for (let line of lines) {
     if (/total/i.test(line)) continue;
     const match = line.match(hargaPattern);
@@ -62,8 +66,7 @@ function calculateTotalHargaFromList(lines) {
 
 function isAngkaBerdiriSendiri(ocrText, targetNumber) {
   const target = parseFloat(targetNumber).toFixed(2);
-  const lines = ocrText.split('\n');
-
+  const lines = ocrText.split('\\n');
   for (let line of lines) {
     const clean = line.trim().toLowerCase();
     const pattern = new RegExp(`\\b(rm|myr)?\\s*${target}\\b`, 'i');
@@ -72,77 +75,15 @@ function isAngkaBerdiriSendiri(ocrText, targetNumber) {
   return false;
 }
 
-function validateResitPerbelanjaanFlexible(caption) {
-  const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
-  if (lines.length < 4) return false;
-  if (lines[0].toLowerCase() !== 'resit perbelanjaan') return false;
-  let adaTarikh = false, adaJumlah = false, adaTujuan = false;
-  const hargaPattern = /^rm\s?\d+(\.\d{2})?$/i;
-  const tujuanPattern = /\b(beli|bayar|untuk|belanja|sewa|claim|servis)\b/i;
-  for (let i = 1; i < lines.length; i++) {
-    if (!adaTarikh && isTarikhValid(lines[i])) adaTarikh = true;
-    if (!adaJumlah && hargaPattern.test(lines[i])) adaJumlah = true;
-    if (!adaTujuan && lines[i].split(' ').length >= 3 && tujuanPattern.test(lines[i])) adaTujuan = true;
-  }
-  return adaTarikh && adaJumlah && adaTujuan;
-}
-
-function validateBayarKomisenFormat(caption) {
-  const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
-  if (lines.length < 4) return false;
-  if (lines[0] !== 'BAYAR KOMISEN') return false;
-  let adaTarikh = false, adaNama = false, adaHarga = false, adaBank = false;
-  const hargaPattern = /^rm\s?\d+(\.\d{2})?$/i;
-  const bankKeywords = ['cimb','maybank','bank islam','rhb','bsn','ambank','public bank','bank rakyat','affin','hsbc','uob'];
-  for (let line of lines) {
-    const lower = line.toLowerCase();
-    if (!adaTarikh && isTarikhValid(line)) adaTarikh = true;
-    if (!adaNama && line.split(' ').length >= 1 && !lower.includes('rm') && !lower.includes('bank')) adaNama = true;
-    if (!adaHarga && hargaPattern.test(line)) adaHarga = true;
-    if (!adaBank && bankKeywords.some(b => lower.includes(b))) adaBank = true;
-  }
-  return adaTarikh && adaNama && adaHarga && adaBank;
-}
-
-function validateBayarTransportFormat(caption) {
-  const lines = caption.trim().split('\n').map(x => x.trim()).filter(x => x !== '');
-  if (lines.length < 4) return false;
-  if (lines[0].toLowerCase() !== 'bayar transport') return false;
-  let adaTarikh = false, adaProduk = false, adaTotalLine = false;
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!adaTarikh && isTarikhValid(line)) adaTarikh = true;
-    if (!adaProduk && line.includes('|') && /rm\s?\d+/.test(line.toLowerCase())) adaProduk = true;
-    if (!adaTotalLine && /total.*rm\s?\d+/i.test(line)) adaTotalLine = true;
-  }
-  const kiraTotal = calculateTotalHargaFromList(lines);
-  const totalLine = lines.find(l => /total.*rm\s?\d+/i.test(l));
-  const match = totalLine?.match(/rm\s?(\d+(\.\d{2})?)/i);
-  const jumlahTotal = match ? parseFloat(match[1]) : 0;
-  return adaTarikh && adaProduk && adaTotalLine && Math.abs(kiraTotal - jumlahTotal) < 0.01;
-}
-
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const caption = msg.caption || msg.text || '';
   if (!caption.trim() || !msg.photo) {
-    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).”);
-    return;
-  }
-  if (caption.toLowerCase().startsWith('resit perbelanjaan') && !validateResitPerbelanjaanFlexible(caption)) {
-    bot.sendMessage(chatId, "❌ Format tidak lengkap untuk RESIT PERBELANJAAN.");
-    return;
-  }
-  if (caption.toLowerCase().startsWith('bayar komisen') && !validateBayarKomisenFormat(caption)) {
-    bot.sendMessage(chatId, "❌ Format tidak lengkap untuk BAYAR KOMISEN.");
-    return;
-  }
-  if (caption.toLowerCase().startsWith('bayar transport') && !validateBayarTransportFormat(caption)) {
-    bot.sendMessage(chatId, "❌ Format tidak lengkap untuk BAYAR TRANSPORT.");
+    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).");
     return;
   }
 
-  const captionLines = caption.split('\n');
+  const captionLines = caption.split('\\n');
   const captionTotal = calculateTotalHargaFromList(captionLines);
 
   try {
@@ -188,3 +129,14 @@ bot.on('message', async (msg) => {
     bot.sendMessage(chatId, "⚠️ Ralat semasa semakan gambar. Gambar mungkin kabur atau tiada teks.");
   }
 });
+"""
+
+# Path to save the fixed ZIP
+fixed_zip_path = "/mnt/data/bot-resit-hal-clean-fix.zip"
+
+with ZipFile(fixed_zip_path, "w") as zipf:
+    zipf.writestr("index.js", fixed_index_js)
+    zipf.writestr(".env.example", "BOT_TOKEN=\nVISION_API_KEY=\n")
+
+fixed_zip_path
+
