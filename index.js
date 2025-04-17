@@ -106,7 +106,7 @@ bot.on('message', async (msg) => {
         requests: [
           {
             image: { content: base64Image },
-            features: [{ type: 'TEXT_DETECTION' }]
+            features: [{ type: 'DOCUMENT_TEXT_DETECTION' }]
           }
         ]
       }
@@ -140,4 +140,5 @@ bot.on('message', async (msg) => {
     bot.sendMessage(chatId, "⚠️ Ralat semasa semakan gambar. Gambar mungkin kabur atau tiada teks.");
   }
 });
+
 
