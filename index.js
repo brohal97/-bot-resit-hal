@@ -1,4 +1,4 @@
-// ✅ Gabungan versi penuh + logik spacing OCR (angka berdiri sendiri)
+// ✅ INDEX.JS PENUH – Gabungan spacing logic cerdas + OCR jumlah + tarikh padan
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -62,8 +62,7 @@ function calculateTotalHargaFromList(lines) {
 
 function isAngkaBerdiriSendiri(ocrText, targetNumber) {
   const target = parseFloat(targetNumber).toFixed(2);
-  const lines = ocrText.split('
-');
+  const lines = ocrText.split('\n');
 
   for (let line of lines) {
     const cleanLine = line.trim();
@@ -83,17 +82,13 @@ function isAngkaBerdiriSendiri(ocrText, targetNumber) {
   }
   return false;
 }
-    }
-  }
-  return false;
-}
 
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const caption = msg.caption || msg.text || '';
 
   if (!caption.trim() || !msg.photo) {
-    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).");
+    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).”);
     return;
   }
 
