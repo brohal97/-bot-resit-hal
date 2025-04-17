@@ -195,7 +195,8 @@ bot.on('message', async (msg) => {
     const tarikhOCR = normalisasiTarikhList(extractTarikhList(ocrText));
     const tarikhCaption = normalisasiTarikhList(extractTarikhList(caption));
     if (!tarikhOCR.length) {
-      bot.sendMessage(chatId, "❌ Gambar tidak mengandungi sebarang tarikh.");
+      bot.sendMessage(chatId, "❌ Tidak sah.
+Wajib hantar SEKALI gambar & teks (dalam satu mesej).");
       return;
     }
     if (!tarikhOCR.some(t => tarikhCaption.includes(t))) {
