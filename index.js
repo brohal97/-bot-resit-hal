@@ -1,4 +1,4 @@
-// ✅ INDEX.JS PENUH: Termasuk fungsi semakan OCR + kedudukan angka dalam gambar
+// ✅ INDEX.JS PENUH: versi terbaru dengan semakan jumlah OCR lebih fleksibel
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -112,41 +112,18 @@ function isJumlahTerasingDenganJarak(ocrText, target) {
   const targetStr = target.toFixed(2);
   const targetRaw = target.toString();
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+  for (let line of lines) {
+    const clean = line.trim();
 
-    if (line === targetRaw || line === `RM${targetStr}` || line === `rm${targetStr}`) {
+    if (clean === targetRaw || clean === `RM${targetStr}` || clean === `rm${targetStr}`) {
       return true;
     }
 
-    const prevLine = lines[i - 1] ? lines[i - 1].trim() : '';
-    const nextLine = lines[i + 1] ? lines[i + 1].trim() : '';
-
-    if ((line.includes(targetRaw) || line.includes(`RM${targetStr}`)) &&
-        !line.includes(' ') &&
-        !prevLine.includes(targetRaw) &&
-        !nextLine.includes(targetRaw)) {
+    if (line.match(new RegExp(`(Amount|RM)?\s{0,5}${targetRaw}\s*$`, 'i'))) {
       return true;
-    }
-
-    const regex = new RegExp(`(?:^|\s)(rm\s?)?${targetRaw}(?=\s|$)`, 'i');
-    const match = line.match(regex);
-    if (match) {
-      const index = line.indexOf(match[0]);
-      const before = line.slice(0, index);
-      const after = line.slice(index + match[0].length);
-
-      const isJarakSebelum = before.match(/\s{5,}$/);
-      const isJarakSelepas = after.match(/^\s{5,}/);
-
-      const jarakSebelumLulus = before === '' || isJarakSebelum;
-      const jarakSelepasLulus = after === '' || isJarakSelepas;
-
-      if (jarakSebelumLulus || jarakSelepasLulus) {
-        return true;
-      }
     }
   }
+
   return false;
 }
 
@@ -222,4 +199,3 @@ bot.on('message', async (msg) => {
 
   bot.sendMessage(chatId, "✅ Semakan selesai. Jika anda tidak menerima mesej ralat, data anda telah lulus semakan awal.");
 });
-
