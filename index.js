@@ -1,5 +1,5 @@
-// ✅ INDEX.JS PENUH: Tambah semula SEMAKAN FORMAT RESIT, KOMISEN, TRANSPORT
-// Termasuk semakan OCR jumlah, tarikh, normalisasi, dan format wajib
+// ✅ INDEX.JS VERSI TERKINI & PENUH BRO HAL 💯
+// Gabungan semua logik ketat + semakan OCR + normalisasi tarikh + semak jumlah terasing
 
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
@@ -15,8 +15,8 @@ function isTarikhValid(line) {
     /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/,
     /\d{1,2}\s+\d{1,2}\s+\d{2,4}/,
     /\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/,
-    /\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i,
-    /(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},?\s+\d{4}/i
+    /\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}/i,
+    /(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{4}/i
   ];
   return patterns.some(p => p.test(lower));
 }
@@ -25,8 +25,8 @@ function extractTarikhList(text) {
   const patterns = [
     /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g,
     /\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b/g,
-    /\b\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/gi,
-    /\b(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)[\s\-]+\d{1,2},?\s+\d{4}/gi
+    /\b\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}/gi,
+    /\b(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)[\s\-]+\d{1,2},?\s+\d{4}/gi
   ];
   let result = [];
   patterns.forEach(p => {
@@ -96,7 +96,7 @@ function validateBayarKomisenFormat(caption) {
   let adaBank = false;
 
   const hargaPattern = /^rm\s?\d+(\.\d{2})?$/i;
-  const bankKeywords = ['cimb', 'maybank', 'bank islam', 'rhb', 'bsn', 'ambank', 'public bank', 'bank rakyat', 'affin', 'hsbc', 'uob'];
+  const bankKeywords = ['cimb','maybank','bank islam','rhb','bsn','ambank','public bank','bank rakyat','affin','hsbc','uob'];
 
   for (let line of lines) {
     const lower = line.toLowerCase();
@@ -114,22 +114,32 @@ function validateBayarTransportFormat(caption) {
   if (lines[0].toLowerCase() !== 'bayar transport') return false;
 
   let adaTarikh = false;
-  let adaProduk = false;
-  let adaTotalLine = false;
+  let produkSah = false;
+  let totalAda = false;
+
+  const hargaPattern = /rm\s?(\d+(\.\d{2})?)/i;
+  const totalPattern = /total.*rm\s?(\d+(\.\d{2})?)/i;
+  let jumlahTersenarai = 0;
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!adaTarikh && isTarikhValid(line)) adaTarikh = true;
-    if (!adaProduk && line.includes('|') && /rm\s?\d+/.test(line.toLowerCase())) adaProduk = true;
-    if (!adaTotalLine && /total.*rm\s?\d+/i.test(line)) adaTotalLine = true;
+    if (line.includes('|') && hargaPattern.test(line)) {
+      produkSah = true;
+      const match = line.match(hargaPattern);
+      if (match) jumlahTersenarai += parseFloat(match[1]);
+    }
+    if (totalPattern.test(line)) {
+      totalAda = true;
+      const match = line.match(hargaPattern);
+      if (match) {
+        const total = parseFloat(match[1]);
+        if (Math.abs(total - jumlahTersenarai) > 0.01) return false;
+      }
+    }
   }
 
-  if (!adaTarikh || !adaProduk || !adaTotalLine) return false;
-
-  const kiraTotal = calculateTotalHargaFromList(lines);
-  const totalLine = kiraTotal;
-
-  return totalLine !== null && Math.abs(kiraTotal - totalLine) < 0.01;
+  return adaTarikh && produkSah && totalAda;
 }
 
 function isJumlahTerasingDenganJarak(ocrText, target) {
@@ -146,7 +156,6 @@ function isJumlahTerasingDenganJarak(ocrText, target) {
       clean === `MYR${targetStr}` ||
       clean === `myr${targetStr}`
     ) return true;
-
     if (line.match(new RegExp(`(Amount|RM|MYR)?\s{0,5}${targetRaw}\.?0{0,2}\s*$`, 'i'))) return true;
   }
   return false;
@@ -155,12 +164,10 @@ function isJumlahTerasingDenganJarak(ocrText, target) {
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const caption = msg.caption || msg.text || '';
-
   if (!caption.trim() || !msg.photo) {
-    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).");
+    bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).”);
     return;
   }
-
   const captionLines = caption.split('\n');
   const captionTotal = calculateTotalHargaFromList(captionLines);
 
@@ -187,7 +194,6 @@ bot.on('message', async (msg) => {
 
     const tarikhOCR = normalisasiTarikhList(extractTarikhList(ocrText));
     const tarikhCaption = normalisasiTarikhList(extractTarikhList(caption));
-
     if (!tarikhOCR.length) {
       bot.sendMessage(chatId, "❌ Gambar tidak mengandungi sebarang tarikh.");
       return;
@@ -206,19 +212,16 @@ bot.on('message', async (msg) => {
       bot.sendMessage(chatId, "❌ Format tidak lengkap.\nRESIT PERBELANJAAN mesti ada:\n📆 Tarikh\n🎯 Tujuan (min 3 perkataan)\n💰 Harga");
       return;
     }
-
+    if (caption.toLowerCase().startsWith('bayar komisen') && !validateBayarKomisenFormat(caption)) {
+      bot.sendMessage(chatId, "❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n💰 Harga RM");
+      return;
+    }
     if (caption.toLowerCase().startsWith('bayar transport') && !validateBayarTransportFormat(caption)) {
       bot.sendMessage(chatId, "❌ Format BAYAR TRANSPORT tidak sah atau jumlah tidak padan.\nSemak semula harga produk dan jumlah total.");
       return;
     }
 
-    if (caption.toLowerCase().startsWith('bayar komisen') && !validateBayarKomisenFormat(caption)) {
-      bot.sendMessage(chatId, "❌ Format BAYAR KOMISEN tidak lengkap atau tidak sah.\nWajib ada:\n📆 Tarikh\n👤 Nama Salesperson\n🏦 Nama Bank\n💰 Harga RM");
-      return;
-    }
-
     bot.sendMessage(chatId, `✅ Gambar disahkan: Tarikh, Jumlah & Format lengkap.`);
-
   } catch (error) {
     console.error("❌ Ralat semasa OCR:", error.message);
     bot.sendMessage(chatId, "⚠️ Ralat semasa semakan gambar. Gambar mungkin kabur atau tiada teks.");
