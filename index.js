@@ -1,5 +1,5 @@
-// ✅ INDEX.JS VERSI TERKINI & PENUH BRO HAL 💯
-// Gabungan semua logik ketat + semakan OCR + normalisasi tarikh + semak jumlah terasing
+// ✅ INDEX.JS AKHIR – Versi paling bersih, stabil & siap untuk deploy tanpa error
+// Termasuk: Format ketat, OCR jumlah & tarikh, normalisasi, tanda petik bersih
 
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
@@ -138,7 +138,6 @@ function validateBayarTransportFormat(caption) {
       }
     }
   }
-
   return adaTarikh && produkSah && totalAda;
 }
 
@@ -168,6 +167,7 @@ bot.on('message', async (msg) => {
     bot.sendMessage(chatId, "❌ Tidak sah.\nWajib hantar SEKALI gambar & teks (dalam satu mesej).");
     return;
   }
+
   const captionLines = caption.split('\n');
   const captionTotal = calculateTotalHargaFromList(captionLines);
 
@@ -191,12 +191,11 @@ bot.on('message', async (msg) => {
     );
 
     const ocrText = visionRes.data.responses[0]?.textAnnotations?.[0]?.description || '';
-
     const tarikhOCR = normalisasiTarikhList(extractTarikhList(ocrText));
     const tarikhCaption = normalisasiTarikhList(extractTarikhList(caption));
+
     if (!tarikhOCR.length) {
-      bot.sendMessage(chatId, "❌ Tidak sah.
-Wajib hantar SEKALI gambar & teks (dalam satu mesej).");
+      bot.sendMessage(chatId, "❌ Gambar tidak mengandungi sebarang tarikh.");
       return;
     }
     if (!tarikhOCR.some(t => tarikhCaption.includes(t))) {
