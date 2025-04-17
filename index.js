@@ -1,4 +1,5 @@
-
+# Final cleaned version of index.js with sendMessage on single line
+final_index_js_cleaned = """
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -7,7 +8,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 function calculateTotalHargaFromList(lines) {
   let total = 0;
-  const hargaPattern = /rm\s?(\d+(\.\d{2})?)/i;
+  const hargaPattern = /rm\\s?(\\d+(\\.\\d{2})?)/i;
   for (let line of lines) {
     if (/total/i.test(line)) continue;
     const match = line.match(hargaPattern);
@@ -18,7 +19,7 @@ function calculateTotalHargaFromList(lines) {
 
 function isAngkaBerdiriSendiri(ocrText, targetNumber) {
   const target = parseFloat(targetNumber).toFixed(2);
-  const lines = ocrText.split('\n');
+  const lines = ocrText.split('\\n');
   for (let line of lines) {
     const cleanLine = line.trim();
     if (cleanLine.includes(target)) {
@@ -38,12 +39,11 @@ bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const caption = msg.caption || msg.text || '';
   if (!caption.trim() || !msg.photo) {
-    bot.sendMessage(chatId, "❌ Tidak sah.
-Wajib hantar SEKALI gambar & teks (dalam satu mesej).");
+    bot.sendMessage(chatId, "❌ Tidak sah.\\nWajib hantar SEKALI gambar & teks (dalam satu mesej).");
     return;
   }
 
-  const captionLines = caption.split('\n');
+  const captionLines = caption.split('\\n');
   const captionTotal = calculateTotalHargaFromList(captionLines);
 
   try {
@@ -76,3 +76,14 @@ Wajib hantar SEKALI gambar & teks (dalam satu mesej).");
     bot.sendMessage(chatId, "⚠️ Ralat semasa semakan gambar. Gambar mungkin kabur atau tiada teks.");
   }
 });
+"""
+
+# Define final zip path
+zip_final_path = "/mnt/data/bot-resit-hal-final-clean-ok.zip"
+
+# Write to zip file
+with ZipFile(zip_final_path, "w") as zipf:
+    zipf.writestr("index.js", final_index_js_cleaned)
+    zipf.writestr(".env.example", "BOT_TOKEN=\nVISION_API_KEY=\n")
+
+zip_final_path
