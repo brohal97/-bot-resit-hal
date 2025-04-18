@@ -1,11 +1,13 @@
+// ===================== DETECT TARIKH SAHAJA (GUNA BASE64 - STABIL) =====================
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-console.log("🤖 BOT AKTIF - MODE: DETECT TARIKH SAHAJA");
+console.log("🤖 BOT AKTIF - MODE: DETECT TARIKH SAHAJA (BASE64)");
 
+// ========== FUNGSI UTAMA: KESAN TARIKH ==========
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
   const patterns = [
@@ -18,6 +20,7 @@ function isTarikhValid(line) {
   return patterns.some(p => p.test(lower));
 }
 
+// ========== BOT LISTEN & SEMAK GAMBAR ==========
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   if (!msg.photo) {
@@ -29,16 +32,15 @@ bot.on('message', async (msg) => {
     const fileId = msg.photo[msg.photo.length - 1].file_id;
     const fileLink = await bot.getFileLink(fileId);
 
+    const imageBuffer = await axios.get(fileLink.href, { responseType: 'arraybuffer' });
+    const base64Image = Buffer.from(imageBuffer.data, 'binary').toString('base64');
+
     const ocrRes = await axios.post(
       `https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`,
       {
         requests: [
           {
-            image: {
-              source: {
-                imageUri: fileLink.href
-              }
-            },
+            image: { content: base64Image },
             features: [{ type: "TEXT_DETECTION" }]
           }
         ]
