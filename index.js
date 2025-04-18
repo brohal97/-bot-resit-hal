@@ -1,20 +1,21 @@
+// ===================== DETECT TARIKH SAHAJA (TANPA JAM) =====================
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-console.log("🤖 BOT AKTIF - MODE: DETECT TARIKH SAHAJA");
+console.log("🤖 BOT AKTIF - MODE: DETECT TARIKH SAHAJA (TANPA JAM)");
 
 // ========== FUNGSI UTAMA: KESAN TARIKH ==========
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
   const patterns = [
-    /\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/, // 10/03/2025 atau 10-03-2025
-    /\d{1,2}\s+\d{1,2}\s+\d{2,4}/,       // 10 03 2025
-    /\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/,   // 2025-03-10 atau 2025/03/10
-    /\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}/i, // 10 Mac 2025
-    /(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{4}/i // Mac 10, 2025
+    /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/, // 10/03/2025 atau 10-03-2025
+    /\b\d{1,2}\s+\d{1,2}\s+\d{2,4}\b/,       // 10 03 2025
+    /\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b/,   // 2025-03-10 atau 2025/03/10
+    /\b\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}\b/i, // 10 Mac 2025
+    /\b(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{4}\b/i // Mac 10, 2025
   ];
   return patterns.some(p => p.test(lower));
 }
@@ -29,7 +30,7 @@ bot.on('message', async (msg) => {
 
   try {
     const fileId = msg.photo[msg.photo.length - 1].file_id;
-    const fileUrl = await bot.getFileLink(fileId); // ← sudah dibetulkan!
+    const fileUrl = await bot.getFileLink(fileId);
 
     const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' });
     const base64Image = Buffer.from(imageBuffer.data, 'binary').toString('base64');
@@ -53,7 +54,9 @@ bot.on('message', async (msg) => {
     const tarikhJumpa = lines.find(line => isTarikhValid(line));
 
     if (tarikhJumpa) {
-      bot.sendMessage(chatId, `✅ Tarikh dijumpai: ${tarikhJumpa}`);
+      const padanTarikh = tarikhJumpa.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}|(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{4}/i);
+      const hanyaTarikh = padanTarikh ? padanTarikh[0] : tarikhJumpa;
+      bot.sendMessage(chatId, `✅ Tarikh dijumpai: ${hanyaTarikh}`);
     } else {
       bot.sendMessage(chatId, "❌ Tiada tarikh dijumpai dalam gambar.");
     }
