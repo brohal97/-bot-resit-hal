@@ -1,11 +1,11 @@
-// ===================== DETECT TARIKH SAHAJA (FORMAT DMY + SEMAK TEMPAT) =====================
+// ===================== DETECT TARIKH + KOSMETIK + KEDAI + PAKAIAN =====================
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-console.log("🤖 BOT AKTIF - DETECT TARIKH & TEMPAT");
+console.log("🤖 BOT AKTIF - DETECT TARIKH, LOKASI, KOSMETIK, KEDAI, PAKAIAN");
 
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
@@ -59,6 +59,41 @@ function isTempatLulus(text) {
   return lokasi.some(nama => lowerText.includes(nama));
 }
 
+function isKosmetikDetected(text) {
+  const keyword = ["LIP", "MATTE", "MASCARA", "EYELINER", "BROW", "SHADOW", "BLUSH", "FOUNDATION", "POWDER"];
+  const upper = text.toUpperCase();
+  return keyword.some(k => upper.includes(k));
+}
+
+function isNamaKedaiKosmetik(text) {
+  const kedai = [
+    "WATSONS", "GUARDIAN", "SEPHORA", "AEON", "MYDIN", "FARMASI",
+    "CARING", "ALPRO", "BIG PHARMACY", "VITAHEALTH",
+    "HERMO", "SASA", "PLAYUP", "INNISFREE", "THE FACE SHOP",
+    "BODY SHOP", "YES2HEALTH", "SUNWAY PHARMACY", "NASKEN",
+    "KFC", "MCDONALD", "MCD", "PIZZA HUT", "DOMINO", "TEXAS", "AYAM PENYET",
+    "BURGER KING", "SUBWAY", "MARRYBROWN", "STARBUCKS", "COFFEE BEAN", "TEALIVE",
+    "SECRET RECIPE", "DUNKIN", "SUSHI KING", "BBQ PLAZA", "OLD TOWN", "PAPA JOHN",
+    "NANDOS", "A&W", "CHATIME", "BOOST JUICE", "FAMILYMART", "DAISO", "BLACK CANYON",
+    "GONG CHA", "LLAOLLAO", "COOLBLOG", "ZUS COFFEE", "HAIDILAO", "SHIH LIN",
+    "HOT & ROLL", "MYKORI", "EMART", "E-MART", "E MART"
+  ];
+  const upper = text.toUpperCase();
+  return kedai.some(nama => upper.includes(nama));
+}
+
+function isPakaianDetected(text) {
+  const keyword = [
+    "TOP", "TEE", "T-SHIRT", "SHIRT", "BLOUSE", "DRESS", "SKIRT",
+    "PANTS", "JEANS", "SHORTS", "KURUNG", "BAJU", "SELUAR",
+    "JACKET", "HOODIE", "SWEATER", "UNIFORM",
+    "MEN", "WOMEN", "LADIES", "BOY", "GIRL", "KIDS", "BABY",
+    "APPAREL", "CLOTHING", "FASHION"
+  ];
+  const upper = text.toUpperCase();
+  return keyword.some(k => upper.includes(k));
+}
+
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   if (!msg.photo) {
@@ -94,6 +129,11 @@ bot.on('message', async (msg) => {
     if (tarikhJumpa) {
       const padanTarikh = tarikhJumpa.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}|(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{4}/i);
       const hanyaTarikh = padanTarikh ? formatTarikhStandard(padanTarikh[0]) : tarikhJumpa;
+
+      if (isKosmetikDetected(text) || isNamaKedaiKosmetik(text) || isPakaianDetected(text)) {
+        bot.sendMessage(chatId, `❌ Resit tidak dibenarkan. Dikesan pembelian kosmetik, pakaian, atau dari kedai tidak sah.`);
+        return;
+      }
 
       const tempatLulus = isTempatLulus(text);
 
