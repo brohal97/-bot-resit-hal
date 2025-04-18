@@ -5,7 +5,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 let pendingUploads = {}; // Simpan pairing ikut message_id
 
-console.log("🤖 BOT AKTIF – Versi REAL FORCE REPLY + Auto Gabung Gambar");
+console.log("🤖 BOT AKTIF – Versi FORCE REPLY + Fallback Upload Pairing");
 
 // Step 1: Bila terima mesej "RESIT PERBELANJAAN"
 bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
@@ -43,12 +43,15 @@ bot.on("callback_query", async (query) => {
 
   // Jika detail asal masih disimpan, aktifkan reply UI
   if (pendingUploads[msgId]) {
-    await bot.sendMessage(chatId, "📎 Sila upload gambar untuk resit ini:", {
+    const uploadPrompt = await bot.sendMessage(chatId, "📎 Sila upload gambar untuk resit ini:", {
       reply_to_message_id: msgId,
       reply_markup: {
         force_reply: true
       }
     });
+
+    // Simpan pairing juga pada mesej upload
+    pendingUploads[uploadPrompt.message_id] = pendingUploads[msgId];
   }
 });
 
@@ -89,3 +92,4 @@ bot.on("photo", async (msg) => {
   // Hapus pairing
   delete pendingUploads[replyTo];
 });
+
