@@ -4,7 +4,7 @@ const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-console.log("🔍 OCR BOT AKTIF – Semak Tarikh Sahaja");
+console.log("🔍 OCR BOT AKTIF – Semak Tarikh Sahaja + DEBUG");
 
 // Bila user hantar gambar untuk test OCR
 bot.on("photo", async (msg) => {
@@ -15,18 +15,22 @@ bot.on("photo", async (msg) => {
     const file = await bot.getFile(fileId);
     const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
 
+    console.log("📎 fileUrl:", fileUrl);
+
     const ocrResult = await axios.post(
       `https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`,
       {
         requests: [{
           image: { source: { imageUri: fileUrl } },
-          features: [{ type: "TEXT_DETECTION" }]
+          features: [{ type: "DOCUMENT_TEXT_DETECTION" }]
         }]
       }
     );
 
     const response = ocrResult.data.responses[0];
     const text = response?.fullTextAnnotation?.text || response?.textAnnotations?.[0]?.description;
+
+    console.log("📄 OCR TEXT:", text);
 
     if (!text || text.trim().length < 3) {
       await bot.sendMessage(chatId, "❌ Gagal baca teks dari gambar resit.");
@@ -47,3 +51,4 @@ bot.on("photo", async (msg) => {
     await bot.sendMessage(chatId, "❌ Berlaku ralat semasa cuba baca gambar.");
   }
 });
+
