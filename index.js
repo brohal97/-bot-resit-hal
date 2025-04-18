@@ -5,7 +5,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 let pendingUploads = {}; // Simpan pairing ikut message_id
 
-console.log("🤖 BOT AKTIF – Versi FORCE REPLY ke DETAIL dengan mesej custom");
+console.log("🤖 BOT AKTIF – Versi FORCE REPLY + Auto Padam Jika Timeout (40s)");
 
 // Step 1: Bila terima mesej "RESIT PERBELANJAAN"
 bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
@@ -13,14 +13,12 @@ bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
   const detailText = msg.text;
   const originalMsgId = msg.message_id;
 
-  // Padam mesej asal user
   try {
     await bot.deleteMessage(chatId, originalMsgId);
   } catch (e) {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
 
-  // Hantar semula mesej detail + butang upload
   const sent = await bot.sendMessage(chatId, detailText, {
     reply_markup: {
       inline_keyboard: [
@@ -29,7 +27,6 @@ bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
     }
   });
 
-  // Simpan pairing ikut message_id
   pendingUploads[sent.message_id] = {
     detail: detailText,
     chatId: chatId,
@@ -41,11 +38,9 @@ bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
 bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id;
   const msgId = query.message.message_id;
-
   const detailMsgId = pendingUploads[msgId]?.detailMsgId || msgId;
 
   if (pendingUploads[msgId]) {
-    // Hantar force_reply secara direct kepada mesej detail
     const trigger = await bot.sendMessage(chatId, '❗️𝐒𝐢𝐥𝐚 𝐔𝐩𝐥𝐨𝐚𝐝 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚 ❗️', {
       reply_to_message_id: detailMsgId,
       reply_markup: {
@@ -57,6 +52,18 @@ bot.on("callback_query", async (query) => {
       ...pendingUploads[msgId],
       triggerMsgId: trigger.message_id
     };
+
+    // Auto delete reminder after 40 seconds if no image received
+    setTimeout(async () => {
+      if (pendingUploads[trigger.message_id]) {
+        try {
+          await bot.deleteMessage(chatId, trigger.message_id);
+        } catch (e) {
+          console.error("❌ Gagal auto delete reminder:", e.message);
+        }
+        delete pendingUploads[trigger.message_id];
+      }
+    }, 40000);
   }
 });
 
@@ -73,14 +80,12 @@ bot.on("photo", async (msg) => {
   const fileId = msg.photo[msg.photo.length - 1].file_id;
   const resitData = pendingUploads[replyTo];
 
-  // Padam gambar asal
   try {
     await bot.deleteMessage(chatId, msg.message_id);
   } catch (e) {
     console.error("❌ Gagal padam gambar asal:", e.message);
   }
 
-  // Padam mesej trigger jika wujud
   if (resitData.triggerMsgId) {
     try {
       await bot.deleteMessage(chatId, resitData.triggerMsgId);
@@ -89,27 +94,24 @@ bot.on("photo", async (msg) => {
     }
   }
 
-  // Padam mesej detail asal
   try {
     await bot.deleteMessage(chatId, resitData.detailMsgId);
   } catch (e) {
     console.error("❌ Gagal padam mesej detail:", e.message);
   }
 
-  // Gabungkan gambar + caption ke dalam satu mesej baru
   const captionGabung = `🧾 RESIT PERBELANJAAN\n${resitData.detail}`;
 
   const sentPhoto = await bot.sendPhoto(chatId, fileId, {
     caption: captionGabung
   });
 
-  // Forward ke channel rasmi jika perlu
   try {
     await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
   } catch (err) {
     console.error("❌ Gagal forward ke channel:", err.message);
   }
 
-  // Hapus pairing
   delete pendingUploads[replyTo];
 });
+
