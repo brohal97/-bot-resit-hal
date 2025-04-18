@@ -1,14 +1,14 @@
 {
-  "name": "ocr-bot-hal",
+  "name": "bot-detect-tarikh",
   "version": "1.0.0",
-  "description": "Telegram bot untuk OCR semakan tarikh",
-  "main": "ocr-test.js",
+  "description": "Telegram bot untuk detect tarikh dalam gambar resit menggunakan Google Vision OCR",
+  "main": "index.js",
   "scripts": {
-    "start": "node ocr-test.js"
+    "start": "node index.js"
   },
   "dependencies": {
     "axios": "^1.6.7",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.3.1",
     "node-telegram-bot-api": "^0.61.0"
   }
 }
