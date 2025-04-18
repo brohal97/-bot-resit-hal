@@ -1,7 +1,7 @@
 {
   "name": "ocr-bot-hal",
   "version": "1.0.0",
-  "description": "Telegram bot untuk OCR semak tarikh",
+  "description": "Telegram bot untuk OCR semakan tarikh",
   "main": "ocr-test.js",
   "scripts": {
     "start": "node ocr-test.js"
