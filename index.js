@@ -1,11 +1,11 @@
-// ===================== DETECT TARIKH SAHAJA (FORMAT DD-MM-YYYY) =====================
+// ===================== DETECT TARIKH SAHAJA (FORMAT DMY + SEMAK TEMPAT) =====================
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-console.log("🤖 BOT AKTIF - MODE: DETECT TARIKH SAHAJA (FORMAT DMY)");
+console.log("🤖 BOT AKTIF - DETECT TARIKH & TEMPAT");
 
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
@@ -24,10 +24,8 @@ function formatTarikhStandard(text) {
     jan: '01', feb: '02', mac: '03', apr: '04', may: '05', jun: '06',
     jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
   };
-
   const clean = text.trim();
 
-  // Format 16 Apr 2025
   let match1 = clean.match(/(\d{1,2})\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{4})/i);
   if (match1) {
     const d = match1[1].padStart(2, '0');
@@ -36,7 +34,6 @@ function formatTarikhStandard(text) {
     return `${d}-${m}-${y}`;
   }
 
-  // Format 2025-04-16 or 2025/04/16
   let match2 = clean.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
   if (match2) {
     const d = match2[3].padStart(2, '0');
@@ -45,7 +42,6 @@ function formatTarikhStandard(text) {
     return `${d}-${m}-${y}`;
   }
 
-  // Format 16-04-2025 or 16/04/2025 or 16 04 2025
   let match3 = clean.match(/(\d{1,2})[\/\-\s](\d{1,2})[\/\-\s](\d{2,4})/);
   if (match3) {
     const d = match3[1].padStart(2, '0');
@@ -55,6 +51,12 @@ function formatTarikhStandard(text) {
   }
 
   return text;
+}
+
+function isTempatLulus(text) {
+  const lokasi = ["kok lanas", "ketereh", "melor"];
+  const lowerText = text.toLowerCase();
+  return lokasi.some(nama => lowerText.includes(nama));
 }
 
 bot.on('message', async (msg) => {
@@ -92,7 +94,14 @@ bot.on('message', async (msg) => {
     if (tarikhJumpa) {
       const padanTarikh = tarikhJumpa.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}|(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{4}/i);
       const hanyaTarikh = padanTarikh ? formatTarikhStandard(padanTarikh[0]) : tarikhJumpa;
-      bot.sendMessage(chatId, `✅ Tarikh dijumpai: ${hanyaTarikh}`);
+
+      const tempatLulus = isTempatLulus(text);
+
+      if (tempatLulus) {
+        bot.sendMessage(chatId, `✅ Tarikh dijumpai: ${hanyaTarikh}\n✅ Lokasi sah: Kok Lanas / Ketereh / Melor`);
+      } else {
+        bot.sendMessage(chatId, `✅ Tarikh dijumpai: ${hanyaTarikh}\n❌ Lokasi tidak sah. Resit bukan dari kawasan yang dibenarkan.`);
+      }
     } else {
       bot.sendMessage(chatId, "❌ Tiada tarikh dijumpai dalam gambar.");
     }
@@ -102,3 +111,4 @@ bot.on('message', async (msg) => {
     bot.sendMessage(chatId, "❌ Gagal membaca gambar. Sila pastikan gambar jelas.");
   }
 });
+
