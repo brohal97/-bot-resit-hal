@@ -1,10 +1,10 @@
 {
-  "name": "resit-bot-hal",
+  "name": "ocr-bot-hal",
   "version": "1.0.0",
-  "description": "Bot semak & forward resit Telegram",
-  "main": "index.js",
+  "description": "Telegram bot untuk semak tarikh dalam gambar resit menggunakan Google Vision OCR",
+  "main": "ocr-test.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node ocr-test.js"
   },
   "dependencies": {
     "axios": "^1.6.7",
