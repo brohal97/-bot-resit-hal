@@ -8,7 +8,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 // ✅ Simpan semua detail resit ikut message_id
 let pendingUploads = {};
 
-console.log("🤖 BOT AKTIF – Sedia proses resit dari Google Sheet");
+console.log("🤖 BOT AKTIF – Sedia proses resit");
 
 // 🧾 Bila terima mesej "RESIT PERBELANJAAN"
 bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
@@ -16,7 +16,7 @@ bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
   const detailText = msg.text;
   const originalMsgId = msg.message_id;
 
-  // ✅ Padam mesej asal dari user (supaya group bersih)
+  // ✅ Padam mesej asal dari user (nampak clean)
   try {
     await bot.deleteMessage(chatId, originalMsgId);
   } catch (e) {
@@ -50,44 +50,57 @@ bot.on("callback_query", async (query) => {
   const dataResit = pendingUploads[msgIdKey];
   if (!dataResit) return;
 
-  // ✅ Bot reply mesej khas upload resit (untuk dijadikan tempat reply gambar)
+  // ✅ Bot reply mesej khas untuk upload resit
   const uploadPrompt = await bot.sendMessage(chatId,
-    `✅ Sila upload gambar resit untuk:\n${dataResit.detail}`, {
+    `🧾 RESIT PERBELANJAAN\n${dataResit.detail}\n\n📸 Sila upload gambar resit ini sebagai REPLY mesej ini.`, {
     reply_to_message_id: query.message.message_id
   });
 
-  // ✅ Simpan semula berdasarkan message upload khas ini
+  // ✅ Simpan semula berdasarkan message upload ini
   pendingUploads[uploadPrompt.message_id] = {
     ...dataResit,
     status: "waiting_photo"
   };
 });
 
-// 🖼 Bila gambar dimuat naik (dalam reply)
+// 🖼 Bila gambar dimuat naik (REPLY kepada mesej bot)
 bot.on("photo", async (msg) => {
   const chatId = msg.chat.id;
   const replyTo = msg.reply_to_message?.message_id;
 
+  // Jika bukan reply pada mesej bot
   if (!replyTo || !pendingUploads[replyTo]) {
-    await bot.sendMessage(chatId, "⚠️ Gambar ini tidak berkait dengan mana-mana resit.");
+    await bot.sendMessage(chatId, "⚠️ Gambar ini tidak dikaitkan dengan mana-mana detail.");
     return;
   }
 
   const fileId = msg.photo[msg.photo.length - 1].file_id;
   const dataResit = pendingUploads[replyTo];
 
-  // ✅ Simpan fileId & anggap LULUS (OCR sambung kemudian)
-  await bot.sendMessage(chatId, "🟢 Gambar diterima. Bot sedang proses resit...");
+  // ✅ Padam gambar asal (yang dihantar user)
+  try {
+    await bot.deleteMessage(chatId, msg.message_id);
+  } catch (e) {
+    console.error("Gagal padam gambar asal:", e.message);
+  }
 
-  // ✅ Hantar semula gambar + caption detail resit
-  const sentPhoto = await bot.sendPhoto(chatId, fileId, {
-    caption: dataResit.detail
+  // ✅ Padam mesej caption asal
+  try {
+    await bot.deleteMessage(chatId, replyTo);
+  } catch (e) {
+    console.error("Gagal padam mesej caption asal:", e.message);
+  }
+
+  // ✅ Gabung gambar + caption dalam satu mesej baru
+  const captionGabung = `🧾 RESIT PERBELANJAAN\n${dataResit.detail}`;
+
+  await bot.sendPhoto(chatId, fileId, {
+    caption: captionGabung
   });
 
-  // ✅ Forward ke Channel rasmi
-  await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
+  // ❌ Forward ke channel = HOLD (belum buat lagi)
 
-  // ✅ Bersihkan data
+  // ✅ Padam dari pending list
   delete pendingUploads[replyTo];
 });
 
