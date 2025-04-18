@@ -5,7 +5,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 let pendingUploads = {}; // Simpan pairing ikut message_id
 
-console.log("🤖 BOT AKTIF – Versi FORCE REPLY ke RESIT DIRECT (Reply UI Automatik)");
+console.log("🤖 BOT AKTIF – Versi FORCE REPLY direct ke DETAIL (Reply UI Tepat)");
 
 // Step 1: Bila terima mesej "RESIT PERBELANJAAN"
 bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
@@ -33,7 +33,7 @@ bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
   pendingUploads[sent.message_id] = {
     detail: detailText,
     chatId: chatId,
-    detailMsgId: sent.message_id // Simpan ID mesej untuk reply direct
+    detailMsgId: sent.message_id
   };
 });
 
@@ -42,16 +42,17 @@ bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id;
   const msgId = query.message.message_id;
 
+  const detailMsgId = pendingUploads[msgId]?.detailMsgId || msgId;
+
   if (pendingUploads[msgId]) {
-    // Hantar force reply ke mesej RESIT asal supaya UI Reply aktif
-    const trigger = await bot.sendMessage(chatId, "✏️", {
-      reply_to_message_id: msgId,
+    // Hantar force_reply secara direct kepada mesej detail
+    const trigger = await bot.sendMessage(chatId, '✏️', {
+      reply_to_message_id: detailMsgId,
       reply_markup: {
         force_reply: true
       }
     });
 
-    // Simpan juga message id trigger supaya boleh padam nanti
     pendingUploads[trigger.message_id] = {
       ...pendingUploads[msgId],
       triggerMsgId: trigger.message_id
