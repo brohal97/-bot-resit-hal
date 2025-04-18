@@ -6,7 +6,6 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 console.log("🔍 OCR BOT AKTIF – Semak Tarikh Sahaja");
 
-// Bila user hantar gambar untuk test OCR
 bot.on("photo", async (msg) => {
   const chatId = msg.chat.id;
   const fileId = msg.photo[msg.photo.length - 1].file_id;
@@ -18,14 +17,10 @@ bot.on("photo", async (msg) => {
     const ocrResult = await axios.post(
       `https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`,
       {
-        requests: [
-          {
-            image: {
-              source: { imageUri: fileUrl }
-            },
-            features: [{ type: "TEXT_DETECTION" }]
-          }
-        ]
+        requests: [{
+          image: { source: { imageUri: fileUrl } },
+          features: [{ type: "TEXT_DETECTION" }]
+        }]
       }
     );
 
@@ -36,7 +31,7 @@ bot.on("photo", async (msg) => {
       return;
     }
 
-    // Cari tarikh dari teks menggunakan pattern pintar
+    // Cari tarikh dari teks menggunakan pattern fleksibel
     const tarikhPattern = /\b(\d{1,2}[\/\-\.\s](\d{1,2}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[\/\-\.\s]\d{2,4}|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[\s\-]?\d{1,2}[,\s]+\d{4})\b/gi;
     const padanan = text.match(tarikhPattern);
 
