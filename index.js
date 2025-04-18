@@ -51,7 +51,10 @@ bot.on("callback_query", async (query) => {
     });
 
     // Simpan pairing juga pada mesej upload
-    pendingUploads[uploadPrompt.message_id] = pendingUploads[msgId];
+    pendingUploads[uploadPrompt.message_id] = {
+      ...pendingUploads[msgId],
+      uploadPromptId: uploadPrompt.message_id
+    };
   }
 });
 
@@ -75,6 +78,13 @@ bot.on("photo", async (msg) => {
     console.error("❌ Gagal padam gambar asal:", e.message);
   }
 
+  // Padam mesej "Sila upload gambar..." juga
+  try {
+    await bot.deleteMessage(chatId, replyTo);
+  } catch (e) {
+    console.error("❌ Gagal padam mesej upload prompt:", e.message);
+  }
+
   // Gabungkan gambar + caption ke dalam satu mesej baru
   const captionGabung = `🧾 RESIT PERBELANJAAN\n${resitData.detail}`;
 
@@ -92,4 +102,3 @@ bot.on("photo", async (msg) => {
   // Hapus pairing
   delete pendingUploads[replyTo];
 });
-
