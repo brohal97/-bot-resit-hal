@@ -3,9 +3,9 @@ const TelegramBot = require('node-telegram-bot-api');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-let lastUploadRequest = {}; // Simpan pairing berdasarkan chatId
+let pendingUploads = {}; // Simpan pairing ikut message_id
 
-console.log("🤖 BOT AKTIF – Versi TRICK Tanpa Reply + Tanpa Mesej Upload");
+console.log("🤖 BOT AKTIF – Versi FORCE REPLY ke RESIT DIRECT (Reply UI Automatik)");
 
 // Step 1: Bila terima mesej "RESIT PERBELANJAAN"
 bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
@@ -24,41 +24,53 @@ bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
   const sent = await bot.sendMessage(chatId, detailText, {
     reply_markup: {
       inline_keyboard: [
-        [{ text: "📸 Upload Resit Disini", callback_data: `upload_${originalMsgId}` }]
+        [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
       ]
     }
   });
 
-  // Simpan ID mesej detail untuk padam kemudian
-  lastUploadRequest[chatId] = {
+  // Simpan pairing ikut message_id
+  pendingUploads[sent.message_id] = {
     detail: detailText,
-    detailMsgId: sent.message_id,
-    timestamp: Date.now()
+    chatId: chatId,
+    detailMsgId: sent.message_id // Simpan ID mesej untuk reply direct
   };
 });
 
-// Step 2: Bila tekan butang upload (TIADA mesej tambahan dihantar)
+// Step 2: Bila tekan butang upload
 bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id;
-  const messageId = query.message.message_id;
+  const msgId = query.message.message_id;
 
-  if (lastUploadRequest[chatId]) {
-    lastUploadRequest[chatId].timestamp = Date.now(); // reset masa
+  if (pendingUploads[msgId]) {
+    // Hantar force reply ke mesej RESIT asal supaya UI Reply aktif
+    const trigger = await bot.sendMessage(chatId, "✏️", {
+      reply_to_message_id: msgId,
+      reply_markup: {
+        force_reply: true
+      }
+    });
+
+    // Simpan juga message id trigger supaya boleh padam nanti
+    pendingUploads[trigger.message_id] = {
+      ...pendingUploads[msgId],
+      triggerMsgId: trigger.message_id
+    };
   }
 });
 
-// Step 3: Bila gambar dihantar (tanpa reply)
+// Step 3: Bila gambar dihantar sebagai reply
 bot.on("photo", async (msg) => {
   const chatId = msg.chat.id;
-  const photoId = msg.photo[msg.photo.length - 1].file_id;
-  const now = Date.now();
+  const replyTo = msg.reply_to_message?.message_id;
 
-  const pair = lastUploadRequest[chatId];
-
-  if (!pair || now - pair.timestamp > 60000) {
+  if (!replyTo || !pendingUploads[replyTo]) {
     await bot.sendMessage(chatId, "⚠️ Gambar ini tidak dikaitkan dengan mana-mana resit. Sila tekan Upload Resit semula.");
     return;
   }
+
+  const fileId = msg.photo[msg.photo.length - 1].file_id;
+  const resitData = pendingUploads[replyTo];
 
   // Padam gambar asal
   try {
@@ -67,17 +79,26 @@ bot.on("photo", async (msg) => {
     console.error("❌ Gagal padam gambar asal:", e.message);
   }
 
-  // Padam mesej asal detail
+  // Padam mesej trigger `✏️` jika wujud
+  if (resitData.triggerMsgId) {
+    try {
+      await bot.deleteMessage(chatId, resitData.triggerMsgId);
+    } catch (e) {
+      console.error("❌ Gagal padam mesej ✏️:", e.message);
+    }
+  }
+
+  // Padam mesej detail asal
   try {
-    await bot.deleteMessage(chatId, pair.detailMsgId);
+    await bot.deleteMessage(chatId, resitData.detailMsgId);
   } catch (e) {
-    console.error("❌ Gagal padam mesej detail asal:", e.message);
+    console.error("❌ Gagal padam mesej detail:", e.message);
   }
 
   // Gabungkan gambar + caption ke dalam satu mesej baru
-  const captionGabung = `🧾 RESIT PERBELANJAAN\n${pair.detail}`;
+  const captionGabung = `🧾 RESIT PERBELANJAAN\n${resitData.detail}`;
 
-  const sentPhoto = await bot.sendPhoto(chatId, photoId, {
+  const sentPhoto = await bot.sendPhoto(chatId, fileId, {
     caption: captionGabung
   });
 
@@ -88,7 +109,7 @@ bot.on("photo", async (msg) => {
     console.error("❌ Gagal forward ke channel:", err.message);
   }
 
-  // Padam pairing
-  delete lastUploadRequest[chatId];
+  // Hapus pairing
+  delete pendingUploads[replyTo];
 });
 
