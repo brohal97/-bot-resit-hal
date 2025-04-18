@@ -5,7 +5,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 let pendingUploads = {}; // Simpan pairing ikut message_id
 
-console.log("🤖 BOT AKTIF – Versi FORCE REPLY direct ke DETAIL (Reply UI Tepat)");
+console.log("🤖 BOT AKTIF – Versi FORCE REPLY ke DETAIL dengan mesej custom");
 
 // Step 1: Bila terima mesej "RESIT PERBELANJAAN"
 bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
@@ -46,7 +46,7 @@ bot.on("callback_query", async (query) => {
 
   if (pendingUploads[msgId]) {
     // Hantar force_reply secara direct kepada mesej detail
-    const trigger = await bot.sendMessage(chatId, '✏️', {
+    const trigger = await bot.sendMessage(chatId, '❗️𝐒𝐢𝐥𝐚 𝐔𝐩𝐥𝐨𝐚𝐝 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚 ❗️', {
       reply_to_message_id: detailMsgId,
       reply_markup: {
         force_reply: true
@@ -80,12 +80,12 @@ bot.on("photo", async (msg) => {
     console.error("❌ Gagal padam gambar asal:", e.message);
   }
 
-  // Padam mesej trigger `✏️` jika wujud
+  // Padam mesej trigger jika wujud
   if (resitData.triggerMsgId) {
     try {
       await bot.deleteMessage(chatId, resitData.triggerMsgId);
     } catch (e) {
-      console.error("❌ Gagal padam mesej ✏️:", e.message);
+      console.error("❌ Gagal padam mesej trigger:", e.message);
     }
   }
 
@@ -113,4 +113,3 @@ bot.on("photo", async (msg) => {
   // Hapus pairing
   delete pendingUploads[replyTo];
 });
-
