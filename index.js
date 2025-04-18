@@ -5,7 +5,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 let pendingUploads = {}; // Simpan pairing ikut message_id
 
-console.log("🤖 BOT AKTIF – Versi FORCE REPLY + Fallback Upload Pairing");
+console.log("🤖 BOT AKTIF – Versi FORCE REPLY + Auto Padam Semua Asal");
 
 // Step 1: Bila terima mesej "RESIT PERBELANJAAN"
 bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
@@ -32,7 +32,8 @@ bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
   // Simpan pairing ikut message_id
   pendingUploads[sent.message_id] = {
     detail: detailText,
-    chatId: chatId
+    chatId: chatId,
+    detailMsgId: sent.message_id // Simpan ID mesej detail untuk padam kemudian
   };
 });
 
@@ -78,11 +79,18 @@ bot.on("photo", async (msg) => {
     console.error("❌ Gagal padam gambar asal:", e.message);
   }
 
-  // Padam mesej "Sila upload gambar..." juga
+  // Padam mesej "Sila upload gambar..."
   try {
     await bot.deleteMessage(chatId, replyTo);
   } catch (e) {
     console.error("❌ Gagal padam mesej upload prompt:", e.message);
+  }
+
+  // Padam mesej asal detail juga
+  try {
+    await bot.deleteMessage(chatId, resitData.detailMsgId);
+  } catch (e) {
+    console.error("❌ Gagal padam mesej detail asal:", e.message);
   }
 
   // Gabungkan gambar + caption ke dalam satu mesej baru
