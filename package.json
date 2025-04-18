@@ -1,13 +1,14 @@
 {
-  "name": "bot-resit-hal",
+  "name": "resit-bot-hal",
   "version": "1.0.0",
+  "description": "Bot semak & forward resit Telegram",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "dotenv": "^16.1.4",
-    "node-telegram-bot-api": "^0.61.0",
-    "axios": "^1.6.7"
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.5",
+    "node-telegram-bot-api": "^0.61.0"
   }
 }
