@@ -5,7 +5,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 let pendingUploads = {}; // Simpan pairing ikut message_id
 
-console.log("🤖 BOT AKTIF – Versi FORCE REPLY + Auto Padam Jika Timeout (40s)");
+console.log("🤖 BOT AKTIF – Versi FORCE REPLY ke DETAIL dengan auto padam dan buang ulangan header");
 
 // Step 1: Bila terima mesej "RESIT PERBELANJAAN"
 bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
@@ -53,7 +53,6 @@ bot.on("callback_query", async (query) => {
       triggerMsgId: trigger.message_id
     };
 
-    // Auto delete reminder after 40 seconds if no image received
     setTimeout(async () => {
       if (pendingUploads[trigger.message_id]) {
         try {
@@ -100,7 +99,10 @@ bot.on("photo", async (msg) => {
     console.error("❌ Gagal padam mesej detail:", e.message);
   }
 
-  const captionGabung = `🧾 RESIT PERBELANJAAN\n${resitData.detail}`;
+  const detailText = resitData.detail.trim();
+  const captionGabung = detailText.toUpperCase().startsWith("RESIT PERBELANJAAN")
+    ? detailText
+    : `🧾 RESIT PERBELANJAAN\n${detailText}`;
 
   const sentPhoto = await bot.sendPhoto(chatId, fileId, {
     caption: captionGabung
