@@ -6,6 +6,7 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 console.log("🔍 OCR BOT AKTIF – Semak Tarikh Sahaja");
 
+// Bila user hantar gambar untuk test OCR
 bot.on("photo", async (msg) => {
   const chatId = msg.chat.id;
   const fileId = msg.photo[msg.photo.length - 1].file_id;
@@ -24,9 +25,10 @@ bot.on("photo", async (msg) => {
       }
     );
 
-    const text = ocrResult.data.responses[0]?.fullTextAnnotation?.text;
+    const response = ocrResult.data.responses[0];
+    const text = response?.fullTextAnnotation?.text || response?.textAnnotations?.[0]?.description;
 
-    if (!text) {
+    if (!text || text.trim().length < 3) {
       await bot.sendMessage(chatId, "❌ Gagal baca teks dari gambar resit.");
       return;
     }
