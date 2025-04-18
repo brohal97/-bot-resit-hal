@@ -1,3 +1,4 @@
+// ===================== DETECT TARIKH SAHAJA (GUNA imageUri) =====================
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -31,14 +32,13 @@ bot.on('message', async (msg) => {
     const fileId = msg.photo[msg.photo.length - 1].file_id;
     const fileLink = await bot.getFileLink(fileId);
 
-    const response = await axios.get(fileLink.href, { responseType: 'arraybuffer' });
-    const base64Image = Buffer.from(response.data, 'binary').toString('base64');
-
     const ocrRes = await axios.post(`https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`, {
       requests: [{
-        image: { content: base64Image },
+        image: { source: { imageUri: fileLink.href } },
         features: [{ type: "TEXT_DETECTION" }]
       }]
+    }, {
+      timeout: 10000
     });
 
     const text = ocrRes.data.responses[0].fullTextAnnotation?.text || "";
@@ -57,4 +57,3 @@ bot.on('message', async (msg) => {
     bot.sendMessage(chatId, "❌ Gagal membaca gambar. Sila pastikan gambar jelas.");
   }
 });
-
