@@ -1,27 +1,26 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-let pendingUploads = {};
+let lastUploadRequest = {};
 
-console.log("🤖 BOT AKTIF – Sistem resit auto bermula");
+console.log("🤖 BOT AKTIF – Versi TRICK Pairing Tanpa Reply + Forward");
 
-// Step 1: Bila detect mesej "RESIT PERBELANJAAN"
+// Step 1: Bila terima mesej "RESIT PERBELANJAAN"
 bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
   const chatId = msg.chat.id;
   const detailText = msg.text;
   const originalMsgId = msg.message_id;
 
-  // Padam mesej asal staff
+  // Padam mesej asal user
   try {
     await bot.deleteMessage(chatId, originalMsgId);
   } catch (e) {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
 
-  // Hantar semula mesej + butang upload
+  // Hantar semula mesej detail + butang upload
   await bot.sendMessage(chatId, detailText, {
     reply_markup: {
       inline_keyboard: [
@@ -29,13 +28,6 @@ bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
       ]
     }
   });
-
-  // Simpan detail ikut ID asal
-  pendingUploads[originalMsgId] = {
-    detail: detailText,
-    chatId: chatId,
-    status: "waiting_for_upload"
-  };
 });
 
 // Step 2: Bila tekan butang upload
@@ -45,58 +37,53 @@ bot.on("callback_query", async (query) => {
   const data = query.data;
 
   const msgIdKey = data.split("_")[1];
-  const resitData = pendingUploads[msgIdKey];
-  if (!resitData) return;
+  const detailText = query.message.text;
 
-  // Hantar mesej khas upload (jadi tempat reply gambar)
-  const uploadMsg = await bot.sendMessage(chatId,
-    `📎 Sila upload gambar untuk resit ini:\n\n🧾 ${resitData.detail}\n\n⚠️ PASTIKAN anda REPLY mesej ini bila upload gambar.`, {
-    reply_to_message_id: messageId
-  });
-
-  // Simpan ikut message_id baru
-  pendingUploads[uploadMsg.message_id] = {
-    ...resitData,
-    status: "waiting_photo"
+  // Simpan pairing sementara dalam 60 saat
+  lastUploadRequest[chatId] = {
+    detail: detailText,
+    timestamp: Date.now()
   };
+
+  await bot.sendMessage(chatId,
+    `📎 Sila upload gambar resit sekarang untuk detail berikut:\n\n🧾 ${detailText}\n\n⚠️ Tak perlu reply, hanya hantar gambar terus dalam 60 saat.`);
 });
 
-// Step 3: Bila gambar diterima
+// Step 3: Bila gambar dihantar (tanpa reply pun boleh)
 bot.on("photo", async (msg) => {
   const chatId = msg.chat.id;
-  const replyTo = msg.reply_to_message?.message_id;
+  const photoId = msg.photo[msg.photo.length - 1].file_id;
+  const now = Date.now();
 
-  // Kalau gambar tidak direply kepada mesej yang sah
-  if (!replyTo || !pendingUploads[replyTo]) {
-    await bot.sendMessage(chatId, "⚠️ Gambar ini tidak dikaitkan dengan mana-mana detail. Sila reply pada mesej bot.");
+  const pair = lastUploadRequest[chatId];
+
+  if (!pair || now - pair.timestamp > 60000) {
+    await bot.sendMessage(chatId, "⚠️ Gambar ini tidak dikaitkan dengan mana-mana detail. Sila tekan butang Upload Resit semula.");
     return;
   }
-
-  const fileId = msg.photo[msg.photo.length - 1].file_id;
-  const resitData = pendingUploads[replyTo];
 
   // Padam gambar asal
   try {
     await bot.deleteMessage(chatId, msg.message_id);
   } catch (e) {
-    console.error("❌ Gagal padam gambar:", e.message);
+    console.error("❌ Gagal padam gambar asal:", e.message);
   }
 
-  // Padam mesej upload caption asal
-  try {
-    await bot.deleteMessage(chatId, replyTo);
-  } catch (e) {
-    console.error("❌ Gagal padam mesej caption asal:", e.message);
-  }
+  // Gabungkan gambar + caption ke dalam satu mesej
+  const captionGabung = `🧾 RESIT PERBELANJAAN\n${pair.detail}`;
 
-  // Gabung gambar + caption dalam satu mesej
-  const captionGabung = `🧾 RESIT PERBELANJAAN\n${resitData.detail}`;
-
-  await bot.sendPhoto(chatId, fileId, {
+  const sentPhoto = await bot.sendPhoto(chatId, photoId, {
     caption: captionGabung
   });
 
-  // Hapus dari simpanan sementara
-  delete pendingUploads[replyTo];
+  // ✅ Forward ke channel rasmi
+  try {
+    await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
+  } catch (err) {
+    console.error("❌ Gagal forward ke channel:", err.message);
+  }
+
+  // Padam pairing selepas guna
+  delete lastUploadRequest[chatId];
 });
 
