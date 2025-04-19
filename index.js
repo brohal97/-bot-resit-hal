@@ -136,7 +136,53 @@ function semakResitPerbelanjaan(msg, chatId, text) {
 }
 
 function semakBayarKomisen(msg, chatId, text) {
-  // logik tarikh, nama, bank, total
+  const caption = msg.caption || msg.text || "";
+  const lines = text.split('\n').map(x => x.trim());
+  const tarikhJumpa = lines.find(line => isTarikhValid(line));
+
+  if (!tarikhJumpa) {
+    bot.sendMessage(chatId, "❌ Gagal kesan tarikh dalam gambar.");
+    return;
+  }
+
+  const hanyaTarikh = formatTarikhStandard(tarikhJumpa);
+  const captionLines = caption.split('\n');
+  const tarikhTeks = captionLines.find(line => isTarikhValid(line));
+  const tarikhDalamTeks = tarikhTeks ? formatTarikhStandard(tarikhTeks) : null;
+
+  if (tarikhDalamTeks !== hanyaTarikh) {
+    bot.sendMessage(chatId, `❌ Tarikh dalam gambar (${hanyaTarikh}) tidak padan dengan teks.`);
+    return;
+  }
+
+  const getValue = (label) => {
+    const regex = new RegExp(label + "\\s*[:：]\\s*(.+)", "i");
+    const match = caption.match(regex);
+    return match ? match[1].trim().toLowerCase() : null;
+  };
+
+  const normalise = (str) => str.replace(/[^0-9]/g, "");
+
+  // Tidak semak nama salesperson – semakan hanya ikut no akaun
+  const namaBank = getValue("nama bank");
+  const noAkaun = getValue("no akaun");
+  const total = getValue("total")?.replace(/(rm|myr)?\\s?/i, "");
+
+  const ocrLower = text.toLowerCase();
+  const gagal = [];
+
+  if (namaBank && !ocrLower.includes(namaBank)) gagal.push("nama bank");
+  if (noAkaun && !normalise(text).includes(normalise(noAkaun))) gagal.push("no akaun bank");
+  if (total && !ocrLower.match(new RegExp(`(rm|myr)?\\s*${total}`, 'i'))) {
+    gagal.push("jumlah total");
+  }
+
+  if (gagal.length) {
+    bot.sendMessage(chatId, `❌ BAYAR KOMISEN gagal diluluskan.\nSebab tidak padan: ${gagal.join(", ")}`);
+    return;
+  }
+
+  bot.sendMessage(chatId, `✅ BAYAR KOMISEN LULUS\nTarikh: ${hanyaTarikh}`);
 }
 
 function semakBayarTransport(msg, chatId, text) {
