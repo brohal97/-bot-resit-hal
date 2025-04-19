@@ -64,7 +64,75 @@ function isTempatLulus(text) {
 }
 
 function semakResitPerbelanjaan(msg, chatId, text) {
-  // logik yang sudah Dato setup sebelum ini dimasukkan semula di sini
+  const caption = msg.caption || msg.text || "";
+  const lines = text.split('\n').map(x => x.trim());
+  const tarikhJumpa = lines.find(line => isTarikhValid(line));
+
+  if (!tarikhJumpa) {
+    bot.sendMessage(chatId, "❌ Gagal kesan tarikh dalam gambar.");
+    return;
+  }
+
+  const hanyaTarikh = formatTarikhStandard(tarikhJumpa);
+  const captionWords = caption.split(/\s+/);
+  let tarikhDalamCaption = null;
+  for (let word of captionWords) {
+    if (isTarikhValid(word)) {
+      tarikhDalamCaption = formatTarikhStandard(word);
+      break;
+    }
+  }
+
+  if (!tarikhDalamCaption || tarikhDalamCaption !== hanyaTarikh) {
+    bot.sendMessage(chatId, `❌ Tarikh dalam gambar (${hanyaTarikh}) tidak padan dengan teks.`);
+    return;
+  }
+
+  const upper = text.toUpperCase();
+  const blacklist = [
+    // Kosmetik
+    "LIP", "MATTE", "MASCARA", "EYELINER", "BROW", "SHADOW", "BLUSH", "FOUNDATION", "POWDER",
+    "PRIMER", "CONCEALER", "TINT", "HIGHLIGHT", "MAKEUP", "LIPSTICK",
+
+    // Pakaian
+    "TOP", "TEE", "T-SHIRT", "SHIRT", "BLOUSE", "DRESS", "SKIRT",
+    "PANTS", "JEANS", "SHORTS", "KURUNG", "BAJU", "SELUAR", "JACKET",
+    "HOODIE", "SWEATER", "UNIFORM", "APPAREL", "CLOTHING", "FASHION",
+
+    // Gajet
+    "PHONE", "SMARTPHONE", "LAPTOP", "USB", "PRINTER", "CAMERA",
+    "CHARGER", "CABLE", "EARPHONE", "MOUSE", "KEYBOARD", "TEMPERED",
+    "SCREEN PROTECTOR", "POWERBANK", "MONITOR", "SPEAKER", "HEADPHONE",
+
+    // Elektrik rumah
+    "RICE COOKER", "PERIUK", "AIR FRYER", "KIPAS", "IRON", "KETTLE",
+    "VACUUM", "TOASTER", "BLENDER", "STEAMER", "OVEN", "MICROWAVE",
+    "AIRCOND", "HEATER", "WASHING MACHINE", "CLOTH DRYER",
+
+    // Nama kedai farmasi / barangan kesihatan
+    "WATSONS", "GUARDIAN", "SEPHORA", "FARMASI", "VITAHEALTH", "ALPRO",
+    "CARING", "BIG PHARMACY", "SUNWAY PHARMACY", "SASA", "HERMO", "NASKEEN",
+
+    // Nama makanan segera
+    "KFC", "MCDONALD", "MCD", "PIZZA HUT", "DOMINO", "TEXAS", "AYAM PENYET",
+    "SUBWAY", "MARRYBROWN", "STARBUCKS", "COFFEE BEAN", "TEALIVE",
+    "SECRET RECIPE", "DUNKIN", "SUSHI KING", "BBQ PLAZA", "OLD TOWN",
+    "PAPA JOHN", "NANDOS", "A&W", "CHATIME", "BOOST JUICE", "ZUS COFFEE",
+    "COOLBLOG", "FAMILYMART", "DAISO", "EMART", "E-MART"
+  ];
+
+  const blacklistMatch = blacklist.filter(word => upper.includes(word));
+  if (blacklistMatch.length) {
+    bot.sendMessage(chatId, "❌ Resit mengandungi perkataan tidak dibenarkan:\n- " + blacklistMatch.join(', '));
+    return;
+  }
+
+  if (!isTempatLulus(text)) {
+    bot.sendMessage(chatId, "❌ Lokasi resit tidak sah. Mesti dari Kok Lanas, Ketereh, atau Melor.");
+    return;
+  }
+
+  bot.sendMessage(chatId, `✅ RESIT PERBELANJAAN LULUS\nTarikh: ${hanyaTarikh}`);
 }
 
 function semakBayarKomisen(msg, chatId, text) {
