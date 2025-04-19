@@ -41,6 +41,7 @@ function formatTarikhStandard(text) {
     nov: '11', november: '11',
     dec: '12', dis: '12', disember: '12', december: '12'
   };
+
   const clean = text.trim();
 
   let match1 = clean.match(/(\d{1,2})\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+(\d{4})/i);
@@ -52,18 +53,8 @@ function formatTarikhStandard(text) {
   let match3 = clean.match(/(\d{1,2})[\/\-\.\s](\d{1,2})[\/\-\.\s](\d{2,4})/);
   if (match3) return `${match3[1].padStart(2, '0')}-${match3[2].padStart(2, '0')}-${match3[3].length === 2 ? '20' + match3[3] : match3[3]}`;
 
-  return text;
-}
-
-
-  let match1 = clean.match(/(\d{1,2})\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+(\d{4})/i);
-  if (match1) return `${match1[1].padStart(2, '0')}-${bulanMap[match1[2].toLowerCase()] || '??'}-${match1[3]}`;
-
-  let match2 = clean.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
-  if (match2) return `${match2[3].padStart(2, '0')}-${match2[2].padStart(2, '0')}-${match2[1]}`;
-
-  let match3 = clean.match(/(\d{1,2})[\/\-\.\s](\d{1,2})[\/\-\.\s](\d{2,4})/);
-  if (match3) return `${match3[1].padStart(2, '0')}-${match3[2].padStart(2, '0')}-${match3[3].length === 2 ? '20' + match3[3] : match3[3]}`;
+  let match4 = clean.match(/(\d{1,2})(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis)\d{4}/i);
+  if (match4) return `${match4[1].padStart(2, '0')}-${bulanMap[match4[2].toLowerCase()] || '??'}-${clean.slice(-4)}`;
 
   return text;
 }
