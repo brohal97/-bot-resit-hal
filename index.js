@@ -3,18 +3,16 @@ const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
-
 let pendingUploads = {}; // Simpan pairing ikut message_id
 
-console.log("🤖 BOT AKTIF – Versi FORCE REPLY ke DETAIL dengan auto padam dan buang ulangan header");
+console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 
-// Step 1: Bila terima mesej dengan nama rasmi (3 jenis)
+// Step 1: Bila terima mesej jenis rasmi
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text?.trim() || "";
   const originalMsgId = msg.message_id;
 
-  // Ambil baris pertama & semak nama rasmi
   const firstLine = text.split("\n")[0].toUpperCase();
   const namaSah = ["RESIT PERBELANJAAN", "BAYAR KOMISEN", "BAYAR TRANSPORT"];
   if (!namaSah.includes(firstLine)) return;
@@ -106,9 +104,7 @@ bot.on("photo", async (msg) => {
   }
 
   const detailText = resitData.detail.trim();
-  const captionGabung = detailText.toUpperCase().startsWith("RESIT PERBELANJAAN")
-    ? detailText
-    : `🧾 RESIT PERBELANJAAN\n${detailText}`;
+  const captionGabung = detailText;
 
   const sentPhoto = await bot.sendPhoto(chatId, fileId, {
     caption: captionGabung
