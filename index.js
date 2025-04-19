@@ -210,27 +210,39 @@ function semakBayarTransport(msg, chatId, text) {
     return;
   }
 
-  // Kira jumlah dari caption (semua baris ada RM kecuali baris 'TOTAL')
+  // Step 1: Kira semua harga RM dalam caption baris produk
   const captionLines = caption.split('\n');
   const hargaRegex = /rm\s?(\d+(?:\.\d{1,2})?)/i;
-  let totalCaption = 0;
+  let totalKira = 0;
   for (let line of captionLines) {
-    if (/total/i.test(line)) continue;
+    if (/total/i.test(line)) continue; // abaikan baris 'TOTAL'
     const match = line.match(hargaRegex);
-    if (match) totalCaption += parseFloat(match[1]);
+    if (match) totalKira += parseFloat(match[1]);
   }
 
-  // Semak jumlah dari OCR penuh, bukan hanya baris 'TOTAL'
-  const total = totalCaption.toFixed(2);
-  const ocrClean = text.replace(/[,]/g, "").toLowerCase();
-  const totalPattern = new RegExp(`(rm|myr)\\s*${total}(\\.00)?`, 'i');
+  // Step 2: Dapatkan nilai dalam baris 'TOTAL RMxxx' dari caption
+  const barisTotal = captionLines.find(line => /total/i.test(line) && hargaRegex.test(line));
+  const nilaiTotalCaption = (() => {
+    const match = barisTotal?.match(hargaRegex);
+    return match ? parseFloat(match[1]) : null;
+  })();
 
-  if (!ocrClean.match(totalPattern)) {
-    bot.sendMessage(chatId, `❌ BAYAR TRANSPORT gagal diluluskan.\nSebab: jumlah total tidak padan dalam gambar (RM/MYR ${total}).`);
+  if (!nilaiTotalCaption || Math.abs(nilaiTotalCaption - totalKira) > 0.01) {
+    bot.sendMessage(chatId, `❌ Jumlah dalam baris TOTAL (RM${nilaiTotalCaption || "?"}) tidak sama dengan hasil kiraan (RM${totalKira.toFixed(2)}).`);
     return;
   }
 
-  bot.sendMessage(chatId, `✅ BAYAR TRANSPORT LULUS\nTarikh: ${hanyaTarikh}\nJumlah: RM${total}`);
+  // Step 3: Cari jumlah RM dalam OCR (seluruh teks)
+  const totalFinal = nilaiTotalCaption.toFixed(2);
+  const ocrClean = text.replace(/[,]/g, "").toLowerCase();
+  const totalPattern = new RegExp(`(rm|myr)\\s*${totalFinal}(\\.00)?`, 'i');
+
+  if (!ocrClean.match(totalPattern)) {
+    bot.sendMessage(chatId, `❌ BAYAR TRANSPORT gagal diluluskan.\nSebab: jumlah RM${totalFinal} tidak ditemui dalam gambar.`);
+    return;
+  }
+
+  bot.sendMessage(chatId, `✅ BAYAR TRANSPORT LULUS\nTarikh: ${hanyaTarikh}\nJumlah: RM${totalFinal}`);
 }
 
 bot.on('message', async (msg) => {
