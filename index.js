@@ -101,7 +101,7 @@ const hanyaTarikh = match ? formatTarikhStandard(match[0]) : formatTarikhStandar
 
   const blacklistMatch = blacklist.filter(word => upper.includes(word));
   if (blacklistMatch.length) {
-    bot.sendMessage(chatId, "❌ Resit mengandungi perkataan tidak dibenarkan:\n- ${blacklistMatch.join(', ')}`);
+    bot.sendMessage(chatId, "❌ Resit mengandungi perkataan tidak dibenarkan:\n- " + blacklistMatch.join(', '));
     return;
   }
 
