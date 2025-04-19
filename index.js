@@ -6,13 +6,17 @@ const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 let pendingUploads = {}; // Simpan pairing ikut message_id
 
-console.log("🤖 BOT AKTIF – Versi FORCE REPLY ke DETAIL dengan auto padam dan buang ulangan header");
+console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 
-// Step 1: Bila terima mesej "RESIT PERBELANJAAN"
-bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
+// Step 1: Terima mesej yang bermula dengan tajuk rasmi
+bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
-  const detailText = msg.text;
+  const text = msg.text?.trim();
   const originalMsgId = msg.message_id;
+
+  if (!text) return;
+  const jenis = text.split("\n")[0].toUpperCase();
+  if (!['RESIT PERBELANJAAN', 'BAYAR KOMISEN', 'BAYAR TRANSPORT'].includes(jenis)) return;
 
   try {
     await bot.deleteMessage(chatId, originalMsgId);
@@ -20,7 +24,7 @@ bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
 
-  const sent = await bot.sendMessage(chatId, detailText, {
+  const sent = await bot.sendMessage(chatId, text, {
     reply_markup: {
       inline_keyboard: [
         [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
@@ -29,9 +33,10 @@ bot.onText(/RESIT PERBELANJAAN/i, async (msg) => {
   });
 
   pendingUploads[sent.message_id] = {
-    detail: detailText,
+    detail: text,
     chatId: chatId,
-    detailMsgId: sent.message_id
+    detailMsgId: sent.message_id,
+    jenis: jenis
   };
 });
 
@@ -101,9 +106,10 @@ bot.on("photo", async (msg) => {
   }
 
   const detailText = resitData.detail.trim();
-  const captionGabung = detailText.toUpperCase().startsWith("RESIT PERBELANJAAN")
+  const upper = detailText.toUpperCase();
+  const captionGabung = upper.startsWith("RESIT PERBELANJAAN") || upper.startsWith("BAYAR KOMISEN") || upper.startsWith("BAYAR TRANSPORT")
     ? detailText
-    : `🧾 RESIT PERBELANJAAN\n${detailText}`;
+    : `🧾 ${resitData.jenis}\n${detailText}`;
 
   const sentPhoto = await bot.sendPhoto(chatId, fileId, {
     caption: captionGabung
