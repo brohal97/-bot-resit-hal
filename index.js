@@ -76,7 +76,7 @@ bot.on('message', async (msg) => {
       const upper = text.toUpperCase();
 
       const kosmetik = ["LIP", "MATTE", "MASCARA", "EYELINER", "BROW", "SHADOW", "BLUSH", "FOUNDATION", "POWDER"].filter(k => upper.includes(k));
-      const pakaian = ["TOP", "TEE", "T-SHIRT", "SHIRT", "BLOUSE", "DRESS", "SKIRT", "PANTS", "JEANS", "SHORTS", "KURUNG", "BAJU", "SELUAR", "JACKET", "HOODIE", "SWEATER", "UNIFORM", "MEN", "WOMEN", "LADIES", "BOY", "GIRL", "KIDS", "BABY", "APPAREL", "CLOTHING", "FASHION"].filter(k => upper.includes(k));
+      const pakaian = ["TOP", "TEE", "T-SHIRT", "SHIRT", "BLOUSE", "DRESS", "SKIRT", "PANTS", "JEANS", "SHORTS", "KURUNG", "BAJU", "SELUAR", "JACKET", "HOODIE", "SWEATER", "UNIFORM", "WOMEN", "LADIES", "BOY", "GIRL", "KIDS", "BABY", "APPAREL", "CLOTHING", "FASHION"].filter(k => upper.includes(k));
       const gajet = ["SMARTPHONE", "PHONE", "LAPTOP", "USB", "CAMERA", "CHARGER", "PRINTER", "EARPHONE", "MOUSE", "KEYBOARD", "SCREEN PROTECTOR"].filter(k => upper.includes(k));
       const elektrik = ["RICE COOKER", "PERIUK", "KETTLE", "STEAMER", "AIR FRYER", "FAN", "IRON", "VACUUM", "DRYER"].filter(k => upper.includes(k));
       const kedai = ["WATSONS", "GUARDIAN", "VITAHEALTH", "AEON", "SEPHORA"].filter(k => upper.includes(k));
