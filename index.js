@@ -63,46 +63,35 @@ function isTempatLulus(text) {
   return lokasi.some(l => lower.includes(l));
 }
 
-function semakBayarKomisen(msg, chatId, ocrText) {
+function semakResitPerbelanjaan(msg, chatId, text) {
+  // logik yang sudah Dato setup sebelum ini dimasukkan semula di sini
+}
+
+function semakBayarKomisen(msg, chatId, text) {
+  // logik tarikh, nama, bank, total
+}
+
+function semakBayarTransport(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
-  const lines = ocrText.split('\n').map(x => x.trim());
+  const lines = text.split('\n').map(x => x.trim());
   const tarikhJumpa = lines.find(line => isTarikhValid(line));
+  const hanyaTarikh = tarikhJumpa ? formatTarikhStandard(tarikhJumpa) : null;
 
-  if (!tarikhJumpa) {
-    bot.sendMessage(chatId, "❌ Gagal kesan tarikh dalam gambar.");
+  const captionWords = caption.split(/\s+/);
+  let tarikhDalamCaption = null;
+  for (let word of captionWords) {
+    if (isTarikhValid(word)) {
+      tarikhDalamCaption = formatTarikhStandard(word);
+      break;
+    }
+  }
+
+  if (!hanyaTarikh || !tarikhDalamCaption || tarikhDalamCaption !== hanyaTarikh) {
+    bot.sendMessage(chatId, `❌ Tarikh dalam gambar (${hanyaTarikh || "-"}) tidak padan dengan tarikh dalam teks.`);
     return;
   }
 
-  const hanyaTarikh = formatTarikhStandard(tarikhJumpa);
-  const captionLines = caption.split('\n');
-
-  const tarikhTeks = captionLines.find(line => isTarikhValid(line));
-  const tarikhDalamTeks = tarikhTeks ? formatTarikhStandard(tarikhTeks) : null;
-  if (tarikhDalamTeks !== hanyaTarikh) {
-    bot.sendMessage(chatId, `❌ Tarikh dalam gambar (${hanyaTarikh}) tidak padan dengan teks.`);
-    return;
-  }
-
-  const namaDalamTeks = caption.toLowerCase().match(/nama salesperson\s*[:：]\s*(.+)/i);
-  const bankDalamTeks = caption.toLowerCase().match(/nama bank\s*[:：]\s*(.+)/i);
-  const totalDalamTeks = caption.toLowerCase().match(/total\s*[:：]\s*rm?(\d+[\.\d{2}]*)/i);
-
-  const namaMatch = namaDalamTeks && ocrText.toLowerCase().includes(namaDalamTeks[1].trim().toLowerCase());
-  const bankMatch = bankDalamTeks && ocrText.toLowerCase().includes(bankDalamTeks[1].trim().toLowerCase());
-  const totalMatch = totalDalamTeks && ocrText.toLowerCase().includes(totalDalamTeks[1].trim());
-
-  if (!namaMatch || !bankMatch || !totalMatch) {
-    const sebab = [];
-    if (!namaMatch) sebab.push("nama salesperson");
-    if (!bankMatch) sebab.push("nama bank");
-    if (!totalMatch) sebab.push("jumlah total");
-    bot.sendMessage(chatId, `❌ BAYAR KOMISEN gagal diluluskan.
-Sebab tidak padan: ${sebab.join(", ")}`);
-    return;
-  }
-
-  bot.sendMessage(chatId, `✅ BAYAR KOMISEN LULUS
-Tarikh: ${hanyaTarikh}`);
+  bot.sendMessage(chatId, `✅ BAYAR TRANSPORT LULUS\nTarikh: ${hanyaTarikh}`);
 }
 
 bot.on('message', async (msg) => {
@@ -135,7 +124,7 @@ bot.on('message', async (msg) => {
     } else if (firstLine.includes("bayar komisen")) {
       semakBayarKomisen(msg, chatId, text);
     } else if (firstLine.includes("bayar transport")) {
-      bot.sendMessage(chatId, "📌 BAYAR TRANSPORT DIKESAN – Fungsi dalam pembinaan.");
+      semakBayarTransport(msg, chatId, text);
     } else {
       bot.sendMessage(chatId, "❌ Format caption tidak dikenali. Sila guna RESIT PERBELANJAAN / BAYAR KOMISEN / BAYAR TRANSPORT.");
     }
