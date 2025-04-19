@@ -183,3 +183,4 @@ Dikesan:
     bot.sendMessage(chatId, "❌ Gagal membaca gambar. Sila pastikan gambar jelas.");
   }
 });
+
