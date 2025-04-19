@@ -106,7 +106,7 @@ const hanyaTarikh = match ? formatTarikhStandard(match[0]) : formatTarikhStandar
   }
 
   if (!isTempatLulus(ocrText)) {
-    bot.sendMessage(chatId, "❌ Lokasi resit tidak sah. Mesti dari Kok Lanas, Ketereh, atau Melor.`);
+    bot.sendMessage(chatId, "❌ Lokasi resit tidak sah. Mesti dari Kok Lanas, Ketereh, atau Melor.");
     return;
   }
 
