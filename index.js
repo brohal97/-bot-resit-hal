@@ -11,15 +11,16 @@ console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
 
-  // 🔒 Pastikan hanya mesej teks sahaja diproses
+  // 🔒 Abaikan jika bukan mesej teks
   if (typeof msg.text !== "string") return;
 
   const text = msg.text.trim();
   const originalMsgId = msg.message_id;
 
-  const firstLine = text.split("\n")[0].toUpperCase();
+  // ✅ Semak jika mesej bermula dengan mana-mana nama utama
   const namaSah = ["RESIT PERBELANJAAN", "BAYAR KOMISEN", "BAYAR TRANSPORT"];
-  if (!namaSah.includes(firstLine)) return;
+  const isKategoriSah = namaSah.some((nama) => text.toUpperCase().startsWith(nama));
+  if (!isKategoriSah) return;
 
   try {
     await bot.deleteMessage(chatId, originalMsgId);
