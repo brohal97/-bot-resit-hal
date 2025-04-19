@@ -8,12 +8,20 @@ console.log("🤖 BOT AKTIF - SEMAK TARIKH + TAPISAN + SEBAB REJECT");
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
   const patterns = [
+    // Format angka biasa
     /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/,
     /\b\d{1,2}\s+\d{1,2}\s+\d{2,4}\b/,
     /\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b/,
     /\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/,
-    /\b\d{1,2}(hb)?\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+\d{2,4}\b/i,
-    /\b(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+\d{1,2},?\s+\d{2,4}\b/i
+
+    // Tanpa ruang (10mac2025, 10mar2025)
+    /\b\d{1,2}(hb)?(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|may|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\d{2,4}\b/i,
+
+    // Ada ruang (10 mac 2025)
+    /\b\d{1,2}(hb)?\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|may|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+\d{2,4}\b/i,
+
+    // Bulan dahulu (march 10, 2025)
+    /\b(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|may|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+\d{1,2},?\s+\d{2,4}\b/i
   ];
   return patterns.some(p => p.test(lower));
 }
@@ -34,6 +42,19 @@ function formatTarikhStandard(text) {
     dec: '12', dis: '12', disember: '12', december: '12'
   };
   const clean = text.trim();
+
+  let match1 = clean.match(/(\d{1,2})\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+(\d{4})/i);
+  if (match1) return `${match1[1].padStart(2, '0')}-${bulanMap[match1[2].toLowerCase()] || '??'}-${match1[3]}`;
+
+  let match2 = clean.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (match2) return `${match2[3].padStart(2, '0')}-${match2[2].padStart(2, '0')}-${match2[1]}`;
+
+  let match3 = clean.match(/(\d{1,2})[\/\-\.\s](\d{1,2})[\/\-\.\s](\d{2,4})/);
+  if (match3) return `${match3[1].padStart(2, '0')}-${match3[2].padStart(2, '0')}-${match3[3].length === 2 ? '20' + match3[3] : match3[3]}`;
+
+  return text;
+}
+
 
   let match1 = clean.match(/(\d{1,2})\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+(\d{4})/i);
   if (match1) return `${match1[1].padStart(2, '0')}-${bulanMap[match1[2].toLowerCase()] || '??'}-${match1[3]}`;
