@@ -73,7 +73,7 @@ function semakResitPerbelanjaan(msg, chatId, ocrText) {
     return;
   }
 
-  const match = tarikhJumpa.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|.../i);
+  const match = tarikhJumpa.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+(jan|feb|mar|mac|...)\s+\d{4}|(jan|feb|mac|...)\s+\d{1,2},?\s+\d{4}/i);
 const hanyaTarikh = match ? formatTarikhStandard(match[0]) : formatTarikhStandard(tarikhJumpa);
 
   let tarikhDalamCaption = null;
