@@ -189,11 +189,14 @@ function semakBayarKomisen(msg, chatId, text) {
 function semakBayarTransport(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
   const lines = text.split('\n').map(x => x.trim());
+
+  // Cari tarikh dalam OCR
   const hanyaTarikh = (() => {
     const t = lines.find(line => isTarikhValid(line));
     return t ? formatTarikhStandard(t) : null;
   })();
 
+  // Cari tarikh dalam caption
   let tarikhDalamCaption = null;
   for (let word of caption.split(/\s+/)) {
     if (isTarikhValid(word)) {
@@ -207,6 +210,7 @@ function semakBayarTransport(msg, chatId, text) {
     return;
   }
 
+  // Kira jumlah dari caption (semua baris ada RM kecuali baris 'TOTAL')
   const captionLines = caption.split('\n');
   const hargaRegex = /rm\s?(\d+(?:\.\d{1,2})?)/i;
   let totalCaption = 0;
@@ -216,24 +220,17 @@ function semakBayarTransport(msg, chatId, text) {
     if (match) totalCaption += parseFloat(match[1]);
   }
 
-  const barisTotal = lines.find(line => /total|jumlah/i.test(line));
-  const totalOCR = (() => {
-    const cleanLine = barisTotal?.replace(/[,]/g, "").toLowerCase();
-    const match = cleanLine?.match(/(rm|myr)\s?(\d+(?:\.\d{1,2})?)/i);
-    return match ? parseFloat(match[2]) : null;
-  })();
+  // Semak jumlah dari OCR penuh, bukan hanya baris 'TOTAL'
+  const total = totalCaption.toFixed(2);
+  const ocrClean = text.replace(/[,]/g, "").toLowerCase();
+  const totalPattern = new RegExp(`(rm|myr)\\s*${total}(\\.00)?`, 'i');
 
-  if (totalOCR === null) {
-    bot.sendMessage(chatId, "❌ Gagal kesan jumlah total dalam gambar (wajib ada RM/MYR dan berada dalam baris TOTAL/JUMLAH).");
+  if (!ocrClean.match(totalPattern)) {
+    bot.sendMessage(chatId, `❌ BAYAR TRANSPORT gagal diluluskan.\nSebab: jumlah total tidak padan dalam gambar (RM/MYR ${total}).`);
     return;
   }
 
-  if (Math.abs(totalCaption - totalOCR) > 0.01) {
-    bot.sendMessage(chatId, `❌ Jumlah dalam caption (RM${totalCaption.toFixed(2)}) tidak sama dengan jumlah dalam gambar (RM${totalOCR.toFixed(2)}).`);
-    return;
-  }
-
-  bot.sendMessage(chatId, `✅ BAYAR TRANSPORT LULUS\nTarikh: ${hanyaTarikh}\nJumlah: RM${totalCaption.toFixed(2)}`);
+  bot.sendMessage(chatId, `✅ BAYAR TRANSPORT LULUS\nTarikh: ${hanyaTarikh}\nJumlah: RM${total}`);
 }
 
 bot.on('message', async (msg) => {
