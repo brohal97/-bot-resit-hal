@@ -10,7 +10,11 @@ console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 // Step 1: Bila terima mesej jenis rasmi
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
-  const text = msg.text?.trim() || "";
+
+  // 🔒 Pastikan hanya mesej teks sahaja diproses
+  if (typeof msg.text !== "string") return;
+
+  const text = msg.text.trim();
   const originalMsgId = msg.message_id;
 
   const firstLine = text.split("\n")[0].toUpperCase();
