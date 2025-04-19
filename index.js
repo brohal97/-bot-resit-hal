@@ -86,7 +86,7 @@ const hanyaTarikh = match ? formatTarikhStandard(match[0]) : formatTarikhStandar
   }
 
   if (!tarikhDalamCaption || tarikhDalamCaption !== hanyaTarikh) {
-    bot.sendMessage(chatId, `❌ Tarikh dalam gambar (${hanyaTarikh}) tidak padan dengan teks.`);
+    bot.sendMessage(chatId, "❌ Tarikh dalam gambar (${hanyaTarikh}) tidak padan dengan teks.");
     return;
   }
 
@@ -101,12 +101,12 @@ const hanyaTarikh = match ? formatTarikhStandard(match[0]) : formatTarikhStandar
 
   const blacklistMatch = blacklist.filter(word => upper.includes(word));
   if (blacklistMatch.length) {
-    bot.sendMessage(chatId, `❌ Resit mengandungi perkataan tidak dibenarkan:\n- ${blacklistMatch.join(', ')}`);
+    bot.sendMessage(chatId, "❌ Resit mengandungi perkataan tidak dibenarkan:\n- ${blacklistMatch.join(', ')}`);
     return;
   }
 
   if (!isTempatLulus(ocrText)) {
-    bot.sendMessage(chatId, `❌ Lokasi resit tidak sah. Mesti dari Kok Lanas, Ketereh, atau Melor.`);
+    bot.sendMessage(chatId, "❌ Lokasi resit tidak sah. Mesti dari Kok Lanas, Ketereh, atau Melor.`);
     return;
   }
 
