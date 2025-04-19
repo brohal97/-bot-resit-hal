@@ -103,12 +103,21 @@ bot.on('message', async (msg) => {
       const hanyaTarikh = match ? formatTarikhStandard(match[0]) : tarikhJumpa;
 
 const caption = msg.caption || msg.text || "";
-const padanDalamTeks = caption.toLowerCase().includes(hanyaTarikh.toLowerCase());
+let tarikhDalamCaption = null;
 
-if (!padanDalamTeks) {
-  bot.sendMessage(chatId, `❌ Tarikh dalam gambar (${hanyaTarikh}) tidak padan dengan teks.`);
+const captionLines = caption.split(/\s+/);
+for (let part of captionLines) {
+  if (isTarikhValid(part)) {
+    tarikhDalamCaption = formatTarikhStandard(part);
+    break;
+  }
+}
+
+if (!tarikhDalamCaption || tarikhDalamCaption !== hanyaTarikh) {
+  bot.sendMessage(chatId, `❌ Tarikh dalam gambar (${hanyaTarikh}) tidak padan dengan tarikh dalam teks.`);
   return;
 }
+
 
       const alasanReject = [];
       const upper = text.toUpperCase();
