@@ -63,7 +63,7 @@ function isTempatLulus(text) {
   return lokasi.some(l => lower.includes(l));
 }
 
-function semakResitPerbelanjaan(msg, chatId, ocrText) {
+function semakBayarKomisen(msg, chatId, ocrText) {
   const caption = msg.caption || msg.text || "";
   const lines = ocrText.split('\n').map(x => x.trim());
   const tarikhJumpa = lines.find(line => isTarikhValid(line));
@@ -73,44 +73,36 @@ function semakResitPerbelanjaan(msg, chatId, ocrText) {
     return;
   }
 
-  const match = tarikhJumpa.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+(jan|feb|mar|mac|...)\s+\d{4}|(jan|feb|mac|...)\s+\d{1,2},?\s+\d{4}/i);
-const hanyaTarikh = match ? formatTarikhStandard(match[0]) : formatTarikhStandard(tarikhJumpa);
+  const hanyaTarikh = formatTarikhStandard(tarikhJumpa);
+  const captionLines = caption.split('\n');
 
-  let tarikhDalamCaption = null;
-  const captionWords = caption.split(/\s+/);
-  for (let word of captionWords) {
-    if (isTarikhValid(word)) {
-      tarikhDalamCaption = formatTarikhStandard(word);
-      break;
-    }
-  }
-
-  if (!tarikhDalamCaption || tarikhDalamCaption !== hanyaTarikh) {
-    bot.sendMessage(chatId, "❌ Tarikh dalam gambar (${hanyaTarikh}) tidak padan dengan teks.");
+  const tarikhTeks = captionLines.find(line => isTarikhValid(line));
+  const tarikhDalamTeks = tarikhTeks ? formatTarikhStandard(tarikhTeks) : null;
+  if (tarikhDalamTeks !== hanyaTarikh) {
+    bot.sendMessage(chatId, `❌ Tarikh dalam gambar (${hanyaTarikh}) tidak padan dengan teks.`);
     return;
   }
 
-  const upper = ocrText.toUpperCase();
-  const blacklist = [
-    "LIP", "MATTE", "MASCARA", "EYELINER", "BROW", "SHADOW", "BLUSH", "FOUNDATION", "POWDER",
-    "TOP", "TEE", "T-SHIRT", "SHIRT", "JEANS", "KURUNG", "BAJU", "SELUAR",
-    "PHONE", "USB", "CHARGER", "SMARTPHONE", "PRINTER", "LAPTOP",
-    "RICE COOKER", "AIR FRYER", "IRON", "KIPAS", "PERIUK",
-    "WATSONS", "GUARDIAN", "SEPHORA", "AEON", "VITAHEALTH"
-  ];
+  const namaDalamTeks = caption.toLowerCase().match(/nama salesperson\s*[:：]\s*(.+)/i);
+  const bankDalamTeks = caption.toLowerCase().match(/nama bank\s*[:：]\s*(.+)/i);
+  const totalDalamTeks = caption.toLowerCase().match(/total\s*[:：]\s*rm?(\d+[\.\d{2}]*)/i);
 
-  const blacklistMatch = blacklist.filter(word => upper.includes(word));
-  if (blacklistMatch.length) {
-    bot.sendMessage(chatId, "❌ Resit mengandungi perkataan tidak dibenarkan:\n- " + blacklistMatch.join(', '));
+  const namaMatch = namaDalamTeks && ocrText.toLowerCase().includes(namaDalamTeks[1].trim().toLowerCase());
+  const bankMatch = bankDalamTeks && ocrText.toLowerCase().includes(bankDalamTeks[1].trim().toLowerCase());
+  const totalMatch = totalDalamTeks && ocrText.toLowerCase().includes(totalDalamTeks[1].trim());
+
+  if (!namaMatch || !bankMatch || !totalMatch) {
+    const sebab = [];
+    if (!namaMatch) sebab.push("nama salesperson");
+    if (!bankMatch) sebab.push("nama bank");
+    if (!totalMatch) sebab.push("jumlah total");
+    bot.sendMessage(chatId, `❌ BAYAR KOMISEN gagal diluluskan.
+Sebab tidak padan: ${sebab.join(", ")}`);
     return;
   }
 
-  if (!isTempatLulus(ocrText)) {
-    bot.sendMessage(chatId, "❌ Lokasi resit tidak sah. Mesti dari Kok Lanas, Ketereh, atau Melor.");
-    return;
-  }
-
-  bot.sendMessage(chatId, `✅ Resit LULUS (RESIT PERBELANJAAN)\nTarikh: ${hanyaTarikh}`);
+  bot.sendMessage(chatId, `✅ BAYAR KOMISEN LULUS
+Tarikh: ${hanyaTarikh}`);
 }
 
 bot.on('message', async (msg) => {
@@ -141,7 +133,7 @@ bot.on('message', async (msg) => {
     if (firstLine.includes("resit perbelanjaan")) {
       semakResitPerbelanjaan(msg, chatId, text);
     } else if (firstLine.includes("bayar komisen")) {
-      bot.sendMessage(chatId, "📌 BAYAR KOMISEN DIKESAN – Fungsi dalam pembinaan.");
+      semakBayarKomisen(msg, chatId, text);
     } else if (firstLine.includes("bayar transport")) {
       bot.sendMessage(chatId, "📌 BAYAR TRANSPORT DIKESAN – Fungsi dalam pembinaan.");
     } else {
@@ -153,4 +145,3 @@ bot.on('message', async (msg) => {
     bot.sendMessage(chatId, "❌ Gagal membaca gambar. Sila pastikan gambar jelas.");
   }
 });
-
