@@ -102,6 +102,14 @@ bot.on('message', async (msg) => {
       const match = tarikhJumpa.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+\d{4}|(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+\d{1,2},?\s+\d{4}/i);
       const hanyaTarikh = match ? formatTarikhStandard(match[0]) : tarikhJumpa;
 
+const caption = msg.caption || msg.text || "";
+const padanDalamTeks = caption.toLowerCase().includes(hanyaTarikh.toLowerCase());
+
+if (!padanDalamTeks) {
+  bot.sendMessage(chatId, `❌ Tarikh dalam gambar (${hanyaTarikh}) tidak padan dengan teks.`);
+  return;
+}
+
       const alasanReject = [];
       const upper = text.toUpperCase();
 
