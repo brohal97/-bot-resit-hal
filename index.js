@@ -144,8 +144,30 @@ bot.on('message', async (msg) => {
         isNamaKedaiKosmetik(text) ||
         isElektrikRumahDetected(text)
       ) {
-        bot.sendMessage(chatId, "❌ Resit tidak dibenarkan. Dikesan pembelian kosmetik, pakaian, gajet, barangan elektrik, atau dari kedai tidak sah.");
+        const alasanReject = [];
+
+      const upper = text.toUpperCase();
+
+      const kosmetik = ["LIP", "MATTE", "MASCARA", "EYELINER", "BROW", "SHADOW", "BLUSH", "FOUNDATION", "POWDER"].filter(k => upper.includes(k));
+      const pakaian = ["TOP", "TEE", "T-SHIRT", "SHIRT", "BLOUSE", "DRESS", "SKIRT", "PANTS", "JEANS", "SHORTS", "KURUNG", "BAJU", "SELUAR", "JACKET", "HOODIE", "SWEATER", "UNIFORM", "MEN", "WOMEN", "LADIES", "BOY", "GIRL", "KIDS", "BABY", "APPAREL", "CLOTHING", "FASHION"].filter(k => upper.includes(k));
+      const gajet = ["SMARTPHONE", "PHONE", "LAPTOP", "USB", "CAMERA", "CHARGER", "PRINTER", "EARPHONE", "MOUSE", "KEYBOARD", "SCREEN PROTECTOR"].filter(k => upper.includes(k));
+      const elektrik = ["RICE COOKER", "PERIUK", "KETTLE", "STEAMER", "AIR FRYER", "FAN", "IRON", "VACUUM", "DRYER"].filter(k => upper.includes(k));
+      const kedai = ["WATSONS", "GUARDIAN", "VITAHEALTH", "AEON", "SEPHORA"].filter(k => upper.includes(k));
+
+      if (kosmetik.length) alasanReject.push(`Kosmetik: ${kosmetik.join(', ')}`);
+      if (pakaian.length) alasanReject.push(`Pakaian: ${pakaian.join(', ')}`);
+      if (gajet.length) alasanReject.push(`Gajet: ${gajet.join(', ')}`);
+      if (elektrik.length) alasanReject.push(`Elektrik: ${elektrik.join(', ')}`);
+      if (kedai.length) alasanReject.push(`Nama Kedai: ${kedai.join(', ')}`);
+
+      if (alasanReject.length > 0) {
+        const msg = "❌ Resit tidak dibenarkan.
+Dikesan:
+" + alasanReject.map(x => `- ${x}`).join('
+');
+        bot.sendMessage(chatId, msg);
         return;
+      }
       }
 
       if (isTempatLulus(text)) {
