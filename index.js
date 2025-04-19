@@ -1,11 +1,11 @@
-// ===================== DETECT TARIKH + KOSMETIK + KEDAI + PAKAIAN =====================
+// ===================== DETECT TARIKH + SEMUA TAPISAN PENUH =====================
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
-console.log("🤖 BOT AKTIF - DETECT TARIKH, LOKASI, KOSMETIK, KEDAI, PAKAIAN");
+console.log("🤖 BOT AKTIF - TAPISAN: TARIKH, LOKASI, KOSMETIK, PAKAIAN, GAJET, KEDAI, ELEKTRIK");
 
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
@@ -53,14 +53,32 @@ function formatTarikhStandard(text) {
   return text;
 }
 
-function isTempatLulus(text) {
-  const lokasi = ["kok lanas", "ketereh", "melor"];
-  const lowerText = text.toLowerCase();
-  return lokasi.some(nama => lowerText.includes(nama));
-}
-
 function isKosmetikDetected(text) {
   const keyword = ["LIP", "MATTE", "MASCARA", "EYELINER", "BROW", "SHADOW", "BLUSH", "FOUNDATION", "POWDER"];
+  const upper = text.toUpperCase();
+  return keyword.some(k => upper.includes(k));
+}
+
+function isPakaianDetected(text) {
+  const keyword = [
+    "TOP", "TEE", "T-SHIRT", "SHIRT", "BLOUSE", "DRESS", "SKIRT",
+    "PANTS", "JEANS", "SHORTS", "KURUNG", "BAJU", "SELUAR",
+    "JACKET", "HOODIE", "SWEATER", "UNIFORM",
+    "MEN", "WOMEN", "LADIES", "BOY", "GIRL", "KIDS", "BABY",
+    "APPAREL", "CLOTHING", "FASHION"
+  ];
+  const upper = text.toUpperCase();
+  return keyword.some(k => upper.includes(k));
+}
+
+function isGajetDetected(text) {
+  const keyword = [
+    "PHONE", "SMARTPHONE", "HANDPHONE", "MOBILE", "IPHONE", "SAMSUNG", "OPPO", "VIVO", "REALME", "XIAOMI",
+    "LAPTOP", "MACBOOK", "TABLET", "PC", "MONITOR", "SSD", "HDD", "CPU", "RAM", "PRINTER", "ROUTER", "MODEM",
+    "CHARGER", "USB", "TYPE-C", "POWERBANK", "ADAPTER", "DOCK", "HDMI", "VGA", "MOUSE", "KEYBOARD",
+    "SPEAKER", "HEADPHONE", "EARPHONE", "EARBUD", "TWS", "MIC", "MICROPHONE", "CAMERA", "CCTV", "DASHCAM",
+    "DRONE", "STYLUS", "HOLDER", "STAND", "TRIPOD", "TEMPERED", "CASING", "CASE", "SCREEN PROTECTOR", "SMARTWATCH"
+  ];
   const upper = text.toUpperCase();
   return keyword.some(k => upper.includes(k));
 }
@@ -82,73 +100,21 @@ function isNamaKedaiKosmetik(text) {
   return kedai.some(nama => upper.includes(nama));
 }
 
-function isPakaianDetected(text) {
+function isElektrikRumahDetected(text) {
   const keyword = [
-    "TOP", "TEE", "T-SHIRT", "SHIRT", "BLOUSE", "DRESS", "SKIRT",
-    "PANTS", "JEANS", "SHORTS", "KURUNG", "BAJU", "SELUAR",
-    "JACKET", "HOODIE", "SWEATER", "UNIFORM",
-    "MEN", "WOMEN", "LADIES", "BOY", "GIRL", "KIDS", "BABY",
-    "APPAREL", "CLOTHING", "FASHION"
+    "RICE COOKER", "COOKER", "PERIUK", "BLENDER", "MIXER", "JUICER", "CHOPPER",
+    "TOASTER", "OVEN", "MICROWAVE", "STEAMER", "AIR FRYER", "FRYER", "KETTLE", "HOTPOT",
+    "WATER HEATER", "HEATER", "AIR COOLER", "FAN", "KIPAS", "AIRCOND", "AIR CONDITIONER",
+    "IRON", "SETTERIKA", "STEAM IRON", "DRYER", "VACUUM", "CLOTH DRYER", "WASHING MACHINE",
+    "SOCKET", "SWITCH", "LAMP", "LIGHT", "LED", "DOOR BELL"
   ];
   const upper = text.toUpperCase();
   return keyword.some(k => upper.includes(k));
 }
 
-bot.on('message', async (msg) => {
-  const chatId = msg.chat.id;
-  if (!msg.photo) {
-    bot.sendMessage(chatId, "❌ Sila hantar gambar resit sahaja.");
-    return;
-  }
-
-  try {
-    const fileId = msg.photo[msg.photo.length - 1].file_id;
-    const fileUrl = await bot.getFileLink(fileId);
-
-    const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-    const base64Image = Buffer.from(imageBuffer.data, 'binary').toString('base64');
-
-    const ocrRes = await axios.post(
-      `https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`,
-      {
-        requests: [
-          {
-            image: { content: base64Image },
-            features: [{ type: "TEXT_DETECTION" }]
-          }
-        ]
-      },
-      { timeout: 10000 }
-    );
-
-    const text = ocrRes.data.responses[0].fullTextAnnotation?.text || "";
-    const lines = text.split('\n').map(x => x.trim());
-
-    const tarikhJumpa = lines.find(line => isTarikhValid(line));
-
-    if (tarikhJumpa) {
-      const padanTarikh = tarikhJumpa.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4}|(jan|feb|mac|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{1,2},?\s+\d{4}/i);
-      const hanyaTarikh = padanTarikh ? formatTarikhStandard(padanTarikh[0]) : tarikhJumpa;
-
-      if (isKosmetikDetected(text) || isNamaKedaiKosmetik(text) || isPakaianDetected(text)) {
-        bot.sendMessage(chatId, `❌ Resit tidak dibenarkan. Dikesan pembelian kosmetik, pakaian, atau dari kedai tidak sah.`);
-        return;
-      }
-
-      const tempatLulus = isTempatLulus(text);
-
-      if (tempatLulus) {
-        bot.sendMessage(chatId, `✅ Tarikh dijumpai: ${hanyaTarikh}\n✅ Lokasi sah: Kok Lanas / Ketereh / Melor`);
-      } else {
-        bot.sendMessage(chatId, `✅ Tarikh dijumpai: ${hanyaTarikh}\n❌ Lokasi tidak sah. Resit bukan dari kawasan yang dibenarkan.`);
-      }
-    } else {
-      bot.sendMessage(chatId, "❌ Tiada tarikh dijumpai dalam gambar.");
-    }
-  } catch (err) {
-    console.error("OCR Error:", err.message);
-    console.log("FULL ERROR:", err.response?.data || err);
-    bot.sendMessage(chatId, "❌ Gagal membaca gambar. Sila pastikan gambar jelas.");
-  }
-});
+function isTempatLulus(text) {
+  const lokasi = ["kok lanas", "ketereh", "melor"];
+  const lowerText = text.toLowerCase();
+  return lokasi.some(nama => lowerText.includes(nama));
+}
 
