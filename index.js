@@ -163,17 +163,18 @@ function semakBayarKomisen(msg, chatId, text) {
 
   const normalise = (str) => str.replace(/[^0-9]/g, "");
 
-  // Tidak semak nama salesperson – semakan hanya ikut no akaun
   const namaBank = getValue("nama bank");
   const noAkaun = getValue("no akaun");
-  const total = getValue("total")?.replace(/(rm|myr)?\\s?/i, "");
+  const total = getValue("total")?.replace(/(rm|myr)?\s?/i, "");
 
-  const ocrLower = text.toLowerCase();
+  const ocrClean = text.replace(/[,]/g, "").toLowerCase();
   const gagal = [];
 
-  if (namaBank && !ocrLower.includes(namaBank)) gagal.push("nama bank");
+  if (namaBank && !ocrClean.includes(namaBank)) gagal.push("nama bank");
   if (noAkaun && !normalise(text).includes(normalise(noAkaun))) gagal.push("no akaun bank");
-  if (total && !ocrLower.match(new RegExp(`(rm|myr)?\\s*${total}`, 'i'))) {
+
+  const totalPattern = new RegExp(`(rm|myr)\\s*${total}(\\.00)?`, 'i');
+  if (total && !ocrClean.match(totalPattern)) {
     gagal.push("jumlah total");
   }
 
@@ -193,7 +194,6 @@ function semakBayarTransport(msg, chatId, text) {
     return t ? formatTarikhStandard(t) : null;
   })();
 
-  // Cari tarikh dalam caption
   let tarikhDalamCaption = null;
   for (let word of caption.split(/\s+/)) {
     if (isTarikhValid(word)) {
@@ -207,7 +207,6 @@ function semakBayarTransport(msg, chatId, text) {
     return;
   }
 
-  // Kira jumlah dari caption (semua baris ada RM kecuali baris 'TOTAL')
   const captionLines = caption.split('\n');
   const hargaRegex = /rm\s?(\d+(?:\.\d{1,2})?)/i;
   let totalCaption = 0;
@@ -217,15 +216,15 @@ function semakBayarTransport(msg, chatId, text) {
     if (match) totalCaption += parseFloat(match[1]);
   }
 
-  // Cari baris 'TOTAL' dalam OCR
   const barisTotal = lines.find(line => /total|jumlah/i.test(line));
   const totalOCR = (() => {
-    const match = barisTotal?.match(/(rm|myr)?\s?(\d+(?:\.\d{1,2})?)/i);
+    const cleanLine = barisTotal?.replace(/[,]/g, "").toLowerCase();
+    const match = cleanLine?.match(/(rm|myr)\s?(\d+(?:\.\d{1,2})?)/i);
     return match ? parseFloat(match[2]) : null;
   })();
 
   if (totalOCR === null) {
-    bot.sendMessage(chatId, "❌ Gagal kesan jumlah total dalam gambar (baris mengandungi perkataan 'TOTAL' atau 'JUMLAH').");
+    bot.sendMessage(chatId, "❌ Gagal kesan jumlah total dalam gambar (wajib ada RM/MYR dan berada dalam baris TOTAL/JUMLAH).");
     return;
   }
 
@@ -236,7 +235,6 @@ function semakBayarTransport(msg, chatId, text) {
 
   bot.sendMessage(chatId, `✅ BAYAR TRANSPORT LULUS\nTarikh: ${hanyaTarikh}\nJumlah: RM${totalCaption.toFixed(2)}`);
 }
-
 
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
