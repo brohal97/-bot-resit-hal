@@ -8,25 +8,34 @@ console.log("🤖 BOT AKTIF - SEMAK TARIKH + TAPISAN + SEBAB REJECT");
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
   const patterns = [
-    /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/,            
-    /\b\d{1,2}\s+\d{1,2}\s+\d{2,4}\b/,                  
-    /\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b/,              
-    /\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/,                    
-    /\b\d{1,2}(hb)?\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis)[\s\-.,]+\d{2,4}\b/i,
-    /\b(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis)[\s\-.,]+\d{1,2},?\s+\d{2,4}\b/i
+    /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/,
+    /\b\d{1,2}\s+\d{1,2}\s+\d{2,4}\b/,
+    /\b\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\b/,
+    /\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/,
+    /\b\d{1,2}(hb)?\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+\d{2,4}\b/i,
+    /\b(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+\d{1,2},?\s+\d{2,4}\b/i
   ];
   return patterns.some(p => p.test(lower));
 }
 
 function formatTarikhStandard(text) {
   const bulanMap = {
-    jan: '01', feb: '02', mar: '03', mac: '03', apr: '04', may: '05', mei: '05',
-    jun: '06', jul: '07', aug: '08', ogos: '08', sep: '09', oct: '10', nov: '11',
-    dec: '12', dis: '12'
+    jan: '01', januari: '01', january: '01',
+    feb: '02', februari: '02', february: '02',
+    mar: '03', mac: '03', march: '03',
+    apr: '04', april: '04',
+    may: '05', mei: '05',
+    jun: '06',
+    jul: '07', julai: '07', july: '07',
+    aug: '08', ogos: '08', august: '08',
+    sep: '09', sept: '09', september: '09',
+    oct: '10', oktober: '10', october: '10',
+    nov: '11', november: '11',
+    dec: '12', dis: '12', disember: '12', december: '12'
   };
   const clean = text.trim();
 
-  let match1 = clean.match(/(\d{1,2})\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis)\s+(\d{4})/i);
+  let match1 = clean.match(/(\d{1,2})\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+(\d{4})/i);
   if (match1) return `${match1[1].padStart(2, '0')}-${bulanMap[match1[2].toLowerCase()] || '??'}-${match1[3]}`;
 
   let match2 = clean.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
@@ -69,7 +78,7 @@ bot.on('message', async (msg) => {
     const tarikhJumpa = lines.find(line => isTarikhValid(line));
 
     if (tarikhJumpa) {
-      const match = tarikhJumpa.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis)\s+\d{4}|(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis)\s+\d{1,2},?\s+\d{4}/i);
+      const match = tarikhJumpa.match(/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+\d{4}|(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+\d{1,2},?\s+\d{4}/i);
       const hanyaTarikh = match ? formatTarikhStandard(match[0]) : tarikhJumpa;
 
       const alasanReject = [];
