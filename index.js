@@ -43,13 +43,21 @@ bot.on("message", async (msg) => {
   }
 
   // Hantar semula dengan butang sahaja (tiada force_reply lagi)
-  const sent = await bot.sendMessage(chatId, text, {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
-      ]
-    }
-  });
+  // Pisahkan baris pertama dan baris selebihnya
+const lines = text.split('\n');
+const firstLine = lines[0] ? `<b>${lines[0]}</b>` : '';
+const otherLines = lines.slice(1).join('\n');
+const formattedText = `${firstLine}\n${otherLines}`;
+
+// Hantar semula mesej dengan butang + bold baris pertama
+const sent = await bot.sendMessage(chatId, formattedText, {
+  parse_mode: "HTML",
+  reply_markup: {
+    inline_keyboard: [
+      [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
+    ]
+  }
+});
 
   pendingUploads[sent.message_id] = {
     detail: text,
