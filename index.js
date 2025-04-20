@@ -207,7 +207,9 @@ function semakBayarKomisen(msg, chatId, text) {
 }
 function semakBayarTransport(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
-  const lines = text.split('\n').map(x => x.trim());
+  const lines = text
+  .split('\n')
+  .map(x => x.replace(/^(today|tarikh|date|printed on)[:,]?\s*/i, '').trim());
 
   // Cari tarikh dalam OCR
   const hanyaTarikh = (() => {
