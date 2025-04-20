@@ -335,7 +335,7 @@ bot.on("photo", async (msg) => {
     await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
     setTimeout(async () => {
       try { await bot.deleteMessage(chatId, sentPhoto.message_id); } catch {}
-    }, 5000);
+    }, 100000);
   } catch {}
 
   // SEMAK RESIT OLEH BOT
