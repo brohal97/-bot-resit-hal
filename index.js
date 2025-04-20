@@ -10,7 +10,9 @@ console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 
 // ===================== BOLD BARIS PERTAMA =====================
 function boldBarisPertama(text) {
-  const lines = text.split("\n");
+  const lines = text
+  .split('\n')
+  .map(x => x.replace(/^(today|tarikh|date|printed on)[:,]?\s*/i, '').trim());
   if (lines.length === 0) return text;
   lines[0] = lines[0]
     .split('')
