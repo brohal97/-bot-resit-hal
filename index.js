@@ -7,6 +7,17 @@ let pendingUploads = {}; // Simpan pairing ikut message_id
 
 console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 
+// Fungsi khas aktifkan reply UI (trick)
+function replyUITrick(chatId, text, replyTo) {
+  return bot.sendMessage(chatId, `📎 Sila upload gambar resit bagi mesej ini:\n\n<b>${text}</b>`, {
+    reply_to_message_id: replyTo,
+    parse_mode: "HTML",
+    reply_markup: {
+      force_reply: true
+    }
+  });
+}
+
 // Bila terima mesej jenis rasmi
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
@@ -16,12 +27,10 @@ bot.on("message", async (msg) => {
   const text = msg.text.trim();
   const originalMsgId = msg.message_id;
 
-  // ✅ Semak jika mesej bermula dengan salah satu kategori
   const namaSah = ["RESIT PERBELANJAAN", "BAYAR KOMISEN", "BAYAR TRANSPORT"];
   const isKategoriSah = namaSah.some((nama) => text.toUpperCase().startsWith(nama));
   if (!isKategoriSah) return;
 
-  // ❌ Tolak kalau mesej terlalu pendek
   if (text.length < 20) {
     await bot.sendMessage(chatId, "⚠️ Sila tambah maklumat seperti tarikh, lokasi dan jumlah dalam mesej.");
     return;
@@ -33,17 +42,40 @@ bot.on("message", async (msg) => {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
 
-  // Hantar semula caption dan aktifkan force_reply (akan buka UI reply automatik)
+  // Hantar semula dengan butang sahaja (tiada force_reply lagi)
   const sent = await bot.sendMessage(chatId, text, {
     reply_markup: {
-      force_reply: true
+      inline_keyboard: [
+        [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
+      ]
     }
   });
 
-  // Simpan pairing supaya nanti kalau perlu semak upload, tahu asalnya dari mana
   pendingUploads[sent.message_id] = {
     detail: text,
     chatId: chatId,
     replyTo: sent.message_id
   };
+});
+
+// Bila user tekan butang "Upload Resit"
+bot.on("callback_query", async (callbackQuery) => {
+  const msg = callbackQuery.message;
+  const data = callbackQuery.data;
+
+  if (!data.startsWith("upload_")) return;
+
+  const uploadInfo = pendingUploads[msg.message_id];
+
+  if (!uploadInfo) {
+    await bot.answerCallbackQuery(callbackQuery.id, {
+      text: "❌ Resit tidak dijumpai atau telah tamat.",
+      show_alert: true
+    });
+    return;
+  }
+
+  // Aktifkan trick reply UI bila user tekan butang
+  await replyUITrick(uploadInfo.chatId, uploadInfo.detail, uploadInfo.replyTo);
+  await bot.answerCallbackQuery(callbackQuery.id);
 });
