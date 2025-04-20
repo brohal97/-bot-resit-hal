@@ -1,4 +1,4 @@
-// ===================== TELEGRAM-BOT-1 (Gabungan Penuh) =====================
+F// ===================== TELEGRAM-BOT-1 (Gabungan Penuh) =====================
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
@@ -320,6 +320,8 @@ bot.on("photo", async (msg) => {
   const chatId = msg.chat.id;
   const replyTo = msg.reply_to_message?.message_id;
 
+const caption = pendingUploads?.[msg.reply_to_message?.message_id]?.detail || msg.caption || msg.text || "";
+
   if (!replyTo || !pendingUploads[replyTo]) {
     await bot.sendMessage(chatId, "⚠️ Gambar ini tidak dikaitkan dengan mana-mana resit. Sila tekan Upload Resit semula.");
     return;
@@ -327,6 +329,7 @@ bot.on("photo", async (msg) => {
 
   const fileId = msg.photo[msg.photo.length - 1].file_id;
   const resitData = pendingUploads[replyTo];
+const caption = resitData?.detail || msg.caption || msg.text || "";
 
   try { await bot.deleteMessage(chatId, msg.message_id); } catch {}
   if (resitData.triggerMsgId) try { await bot.deleteMessage(chatId, resitData.triggerMsgId); } catch {}
