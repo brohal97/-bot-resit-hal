@@ -123,7 +123,7 @@ bot.on("photo", async (msg) => {
     await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
     setTimeout(async () => {
       try { await bot.deleteMessage(chatId, sentPhoto.message_id); } catch (e) {}
-    }, 10000);
+    }, 1000000);
   } catch (err) {
     console.error("❌ Gagal forward ke channel:", err.message);
   }
