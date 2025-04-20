@@ -24,34 +24,45 @@ bot.on('message', async (msg) => {
   const otherLines = lines.slice(1).join('\n');
   const mesejBaru = [boldLine, otherLines].filter(Boolean).join('\n');
 
-  // Hantar semula mesej dengan butang "Upload Resit"
-  await bot.sendMessage(chatId, mesejBaru, {
-    parse_mode: 'Markdown',
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: '📎 Upload Resit', callback_data: 'upload_resit' }
+  // Hantar semula mesej dan SIMPAN messageId reply
+  try {
+    const sentMsg = await bot.sendMessage(chatId, mesejBaru, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '📎 Upload Resit', callback_data: 'upload_resit' }]
         ]
-      ]
-    }
-  });
+      }
+    });
+
+    // Simpan pairing (boleh guna untuk future storage kalau nak)
+    console.log('✅ Reply ID:', sentMsg.message_id);
+  } catch (err) {
+    console.log('❌ Gagal hantar mesej baru:', err.message);
+  }
 });
 
 // Bila user tekan butang "Upload Resit"
 bot.on('callback_query', async (callbackQuery) => {
   const data = callbackQuery.data;
   const msg = callbackQuery.message;
+
+  if (!msg) return; // fail-safe kalau callback tiada mesej
+
   const chatId = msg.chat.id;
   const messageId = msg.message_id;
 
   if (data === 'upload_resit') {
-    // Bot akan reply mesej asal (fungsi pairing)
-    await bot.sendMessage(chatId, 'Sila upload gambar resit anda di bawah mesej ini 👇', {
-      reply_to_message_id: messageId
-    });
+    try {
+      // Bot reply pada mesej bold asal + butang
+      await bot.sendMessage(chatId, 'Sila upload gambar resit anda di bawah mesej ini 👇', {
+        reply_to_message_id: messageId
+      });
 
-    // Optional: Buang loading animation pada butang
-    await bot.answerCallbackQuery(callbackQuery.id);
+      // Buang loading di butang
+      await bot.answerCallbackQuery(callbackQuery.id);
+    } catch (err) {
+      console.log('❌ Gagal reply UI:', err.message);
+    }
   }
 });
-
