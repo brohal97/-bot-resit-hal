@@ -65,6 +65,7 @@ console.log("📥 Mesej diterima:", msg.text);
 
   const cleanText = boldKategoriUtama(normalizeFont(originalText));
 
+  try {
   const sent = await bot.sendMessage(chatId, cleanText, {
     reply_markup: {
       inline_keyboard: [
@@ -72,6 +73,11 @@ console.log("📥 Mesej diterima:", msg.text);
       ]
     }
   });
+  console.log("✅ Berjaya hantar mesej balasan");
+} catch (err) {
+  console.error("❌ Gagal hantar mesej balasan:", err.message);
+}
+
 
   pendingUploads[sent.message_id] = {
     detail: cleanText,
