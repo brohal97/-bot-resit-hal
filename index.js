@@ -87,3 +87,38 @@ bot.on("callback_query", async (callbackQuery) => {
   await replyUITrick(uploadInfo.chatId, uploadInfo.detail, uploadInfo.replyTo);
   await bot.answerCallbackQuery(callbackQuery.id);
 });
+bot.on("photo", async (msg) => {
+  const chatId = msg.chat.id;
+  const replyToMsg = msg.reply_to_message;
+
+  if (!replyToMsg) return;
+
+  const matched = Object.values(pendingUploads).find(item => item.replyTo === replyToMsg.message_id);
+  if (!matched) return;
+
+  try {
+    // Padam gambar + force_reply
+    await bot.deleteMessage(chatId, msg.message_id);
+    await bot.deleteMessage(chatId, replyToMsg.message_id);
+  } catch (e) {
+    console.error("❌ Gagal padam mesej:", e.message);
+  }
+
+  // Ambil file_id gambar resolusi tertinggi
+  const fileId = msg.photo[msg.photo.length - 1].file_id;
+
+  // Format semula caption dengan baris pertama bold
+  const lines = matched.detail.split('\n');
+  const firstLine = lines[0] ? `<b>${lines[0]}</b>` : '';
+  const otherLines = lines.slice(1).join('\n');
+  const formattedCaption = `${firstLine}\n${otherLines}`;
+
+  // Hantar semula dalam 1 post (gambar + caption)
+  await bot.sendPhoto(chatId, fileId, {
+    caption: formattedCaption,
+    parse_mode: "HTML"
+  });
+
+  // Optional: buang dari pendingUploads
+  delete pendingUploads[replyToMsg.message_id];
+});
