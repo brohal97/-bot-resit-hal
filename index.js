@@ -1,34 +1,11 @@
-// ===================== TELEGRAM-BOT-1 (Gabungan Penuh) =====================
+// ===================== BOT SEMAK 3 JENIS RESIT =====================
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
-let pendingUploads = {}; // Simpan pairing antara mesej & upload
+console.log("🤖 BOT AKTIF - SEMAK RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 
-console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
-
-// ===================== BOLD BARIS PERTAMA =====================
-function boldBarisPertama(text) {
-  const lines = text
-  .split('\n')
-  .map(x => x.trim())
-  .filter(x => x !== '');
-
-const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${line}`.trim())];
-
-  if (lines.length === 0) return text;
-  lines[0] = lines[0]
-    .split('')
-    .map(c => {
-      if (/[A-Z]/.test(c)) return String.fromCodePoint(0x1D400 + (c.charCodeAt(0) - 65)); // A–Z
-      if (/[a-z]/.test(c)) return String.fromCodePoint(0x1D41A + (c.charCodeAt(0) - 97)); // a–z
-      return c;
-    })
-    .join('');
-  return lines.join("\n");
-}
-// ===================== SEMAKAN TARIKH & FORMAT =====================
 function isTarikhValid(line) {
   const lower = line.toLowerCase();
   const patterns = [
@@ -60,7 +37,6 @@ function formatTarikhStandard(text) {
   };
 
   const clean = text.trim();
-
   let match1 = clean.match(/(\d{1,2})\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|may|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+(\d{4})/i);
   if (match1) return `${match1[1].padStart(2, '0')}-${bulanMap[match1[2].toLowerCase()] || '??'}-${match1[3]}`;
 
@@ -86,16 +62,11 @@ function isTempatLulus(text) {
   const lower = text.toLowerCase();
   return lokasi.some(l => lower.includes(l));
 }
+
 function semakResitPerbelanjaan(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
-  const lines = text
-  .split('\n')
-  .map(x => x.trim())
-  .filter(x => x !== '');
-
-const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${line}`.trim())];
-
-  const tarikhJumpa = gabungan.find(line => isTarikhValid(line));
+  const lines = text.split('\n').map(x => x.trim());
+  const tarikhJumpa = lines.find(line => isTarikhValid(line));
 
   if (!tarikhJumpa) {
     bot.sendMessage(chatId, "❌ Gagal kesan tarikh dalam gambar.");
@@ -138,11 +109,11 @@ const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${l
     "VACUUM", "TOASTER", "BLENDER", "STEAMER", "OVEN", "MICROWAVE",
     "AIRCOND", "HEATER", "WASHING MACHINE", "CLOTH DRYER",
 
-    // Nama kedai farmasi / kesihatan
+    // Nama kedai farmasi / barangan kesihatan
     "WATSONS", "GUARDIAN", "SEPHORA", "FARMASI", "VITAHEALTH", "ALPRO",
     "CARING", "BIG PHARMACY", "SUNWAY PHARMACY", "SASA", "HERMO", "NASKEEN",
 
-    // Makanan segera
+    // Nama makanan segera
     "KFC", "MCDONALD", "MCD", "PIZZA HUT", "DOMINO", "TEXAS", "AYAM PENYET",
     "SUBWAY", "MARRYBROWN", "STARBUCKS", "COFFEE BEAN", "TEALIVE",
     "SECRET RECIPE", "DUNKIN", "SUSHI KING", "BBQ PLAZA", "OLD TOWN",
@@ -163,16 +134,11 @@ const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${l
 
   bot.sendMessage(chatId, `✅ RESIT PERBELANJAAN LULUS\nTarikh: ${hanyaTarikh}`);
 }
+
 function semakBayarKomisen(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
-  const lines = text
-  .split('\n')
-  .map(x => x.trim())
-  .filter(x => x !== '');
-
-const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${line}`.trim())];
-
-  const tarikhJumpa = gabungan.find(line => isTarikhValid(line));
+  const lines = text.split('\n').map(x => x.trim());
+  const tarikhJumpa = lines.find(line => isTarikhValid(line));
 
   if (!tarikhJumpa) {
     bot.sendMessage(chatId, "❌ Gagal kesan tarikh dalam gambar.");
@@ -219,15 +185,10 @@ const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${l
 
   bot.sendMessage(chatId, `✅ BAYAR KOMISEN LULUS\nTarikh: ${hanyaTarikh}`);
 }
+
 function semakBayarTransport(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
-  const lines = text
-  .split('\n')
-  .map(x => x.trim())
-  .filter(x => x !== '');
-
-const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${line}`.trim())];
-
+  const lines = text.split('\n').map(x => x.trim());
 
   // Cari tarikh dalam OCR
   const hanyaTarikh = (() => {
@@ -249,18 +210,18 @@ const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${l
     return;
   }
 
-  // Step 1: Kira semua harga RM dalam caption (baris produk sahaja)
+  // Step 1: Kira semua harga RM dalam caption baris produk
   const captionLines = caption.split('\n');
   const hargaRegex = /rm\s?(\d+(?:\.\d{1,2})?)/i;
   let totalKira = 0;
   for (let line of captionLines) {
-    if (/total|jumlah/i.test(line)) continue; // abaikan baris 'TOTAL'
+    if (/total/i.test(line)) continue; // abaikan baris 'TOTAL'
     const match = line.match(hargaRegex);
     if (match) totalKira += parseFloat(match[1]);
   }
 
   // Step 2: Dapatkan nilai dalam baris 'TOTAL RMxxx' dari caption
-  const barisTotal = captionLines.find(line => /total|jumlah/i.test(line) && hargaRegex.test(line));
+  const barisTotal = captionLines.find(line => /total/i.test(line) && hargaRegex.test(line));
   const nilaiTotalCaption = (() => {
     const match = barisTotal?.match(hargaRegex);
     return match ? parseFloat(match[1]) : null;
@@ -271,7 +232,7 @@ const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${l
     return;
   }
 
-  // Step 3: Cari jumlah akhir RM dalam OCR (seluruh teks)
+  // Step 3: Cari jumlah RM dalam OCR (seluruh teks)
   const totalFinal = nilaiTotalCaption.toFixed(2);
   const ocrClean = text.replace(/[,]/g, "").toLowerCase();
   const totalPattern = new RegExp(`(rm|myr)\\s*${totalFinal}(\\.00)?`, 'i');
@@ -283,107 +244,44 @@ const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${l
 
   bot.sendMessage(chatId, `✅ BAYAR TRANSPORT LULUS\nTarikh: ${hanyaTarikh}\nJumlah: RM${totalFinal}`);
 }
-// ===================== ROUTING & HANDLER UTAMA =====================
-bot.on("message", async (msg) => {
+
+bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
-  const text = msg.text?.trim() || "";
-  const originalMsgId = msg.message_id;
+  const caption = msg.caption || msg.text || "";
+  const firstLine = caption.trim().split('\n')[0].toLowerCase();
 
-  const isJenisResit = ["RESIT PERBELANJAAN", "BAYAR KOMISEN", "BAYAR TRANSPORT"].includes(text.split("\n")[0]?.toUpperCase());
-
-  if (isJenisResit && text.length >= 20) {
-    try { await bot.deleteMessage(chatId, originalMsgId); } catch {}
-
-    const boldText = boldBarisPertama(text);
-    const sent = await bot.sendMessage(chatId, boldText, {
-      reply_markup: {
-        inline_keyboard: [[{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]]
-      }
-    });
-
-    pendingUploads[sent.message_id] = {
-      detail: text,
-      chatId: chatId,
-      detailMsgId: sent.message_id
-    };
-  }
-});
-
-// ===================== BILA TEKAN BUTANG =====================
-bot.on("callback_query", async (query) => {
-  const chatId = query.message.chat.id;
-  const msgId = query.message.message_id;
-  const detailMsgId = pendingUploads[msgId]?.detailMsgId || msgId;
-
-  if (pendingUploads[msgId]) {
-    const trigger = await bot.sendMessage(chatId, '❗️𝐒𝐢𝐥𝐚 𝐔𝐩𝐥𝐨𝐚𝐝 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚 ❗️', {
-      reply_to_message_id: detailMsgId,
-      reply_markup: { force_reply: true }
-    });
-
-    pendingUploads[trigger.message_id] = {
-      ...pendingUploads[msgId],
-      triggerMsgId: trigger.message_id
-    };
-
-    setTimeout(async () => {
-      if (pendingUploads[trigger.message_id]) {
-        try { await bot.deleteMessage(chatId, trigger.message_id); } catch {}
-        delete pendingUploads[trigger.message_id];
-      }
-    }, 40000);
-  }
-});
-
-// ===================== BILA GAMBAR DIHANTAR =====================
-bot.on("photo", async (msg) => {
-  const chatId = msg.chat.id;
-  const replyTo = msg.reply_to_message?.message_id;
-
-const caption = pendingUploads?.[msg.reply_to_message?.message_id]?.detail || msg.caption || msg.text || "";
-
-  if (!replyTo || !pendingUploads[replyTo]) {
-    await bot.sendMessage(chatId, "⚠️ Gambar ini tidak dikaitkan dengan mana-mana resit. Sila tekan Upload Resit semula.");
+  if (!msg.photo) {
+    bot.sendMessage(chatId, "❌ Sila hantar gambar resit sahaja.");
     return;
   }
 
-  const fileId = msg.photo[msg.photo.length - 1].file_id;
-  const resitData = pendingUploads[replyTo];
-
-  try { await bot.deleteMessage(chatId, msg.message_id); } catch {}
-  if (resitData.triggerMsgId) try { await bot.deleteMessage(chatId, resitData.triggerMsgId); } catch {}
-  try { await bot.deleteMessage(chatId, resitData.detailMsgId); } catch {}
-
-  const captionGabung = boldBarisPertama(resitData.detail.trim());
-  const sentPhoto = await bot.sendPhoto(chatId, fileId, { caption: captionGabung });
-
   try {
-    await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
-    setTimeout(async () => {
-      try { await bot.deleteMessage(chatId, sentPhoto.message_id); } catch {}
-    }, 100000);
-  } catch {}
+    const fileId = msg.photo[msg.photo.length - 1].file_id;
+    const fileUrl = await bot.getFileLink(fileId);
+    const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+    const base64Image = Buffer.from(imageBuffer.data, 'binary').toString('base64');
 
-  // SEMAK RESIT OLEH BOT
-  const fileUrl = await bot.getFileLink(fileId);
-  const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-  const base64Image = Buffer.from(imageBuffer.data, 'binary').toString('base64');
+    const ocrRes = await axios.post(`https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`, {
+      requests: [{
+        image: { content: base64Image },
+        features: [{ type: "TEXT_DETECTION" }]
+      }]
+    });
 
-  const ocrRes = await axios.post(`https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`, {
-    requests: [{ image: { content: base64Image }, features: [{ type: "TEXT_DETECTION" }] }]
-  });
+    const text = ocrRes.data.responses[0].fullTextAnnotation?.text || "";
 
-  const ocrText = ocrRes.data.responses[0].fullTextAnnotation?.text || "";
-  const firstLine = resitData.detail.split('\n')[0].toLowerCase();
+    if (firstLine.includes("resit perbelanjaan")) {
+      semakResitPerbelanjaan(msg, chatId, text);
+    } else if (firstLine.includes("bayar komisen")) {
+      semakBayarKomisen(msg, chatId, text);
+    } else if (firstLine.includes("bayar transport")) {
+      semakBayarTransport(msg, chatId, text);
+    } else {
+      bot.sendMessage(chatId, "❌ Format caption tidak dikenali. Sila guna RESIT PERBELANJAAN / BAYAR KOMISEN / BAYAR TRANSPORT.");
+    }
 
-  if (firstLine.includes("resit perbelanjaan")) {
-    semakResitPerbelanjaan(msg, chatId, ocrText);
-  } else if (firstLine.includes("bayar komisen")) {
-    semakBayarKomisen(msg, chatId, ocrText);
-  } else if (firstLine.includes("bayar transport")) {
-    semakBayarTransport(msg, chatId, ocrText);
+  } catch (err) {
+    console.error("OCR Error:", err.message);
+    bot.sendMessage(chatId, "❌ Gagal membaca gambar. Sila pastikan gambar jelas.");
   }
-
-  delete pendingUploads[replyTo];
 });
-
