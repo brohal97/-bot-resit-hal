@@ -12,7 +12,11 @@ console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 function boldBarisPertama(text) {
   const lines = text
   .split('\n')
-  .map(x => x.replace(/^(today|tarikh|date|printed on)[:,]?\s*/i, '').trim());
+  .map(x => x.trim())
+  .filter(x => x !== '');
+
+const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${line}`.trim())];
+
   if (lines.length === 0) return text;
   lines[0] = lines[0]
     .split('')
@@ -86,8 +90,12 @@ function semakResitPerbelanjaan(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
   const lines = text
   .split('\n')
-  .map(x => x.replace(/^(today|tarikh|date|printed on)[:,]?\s*/i, '').trim());
-  const tarikhJumpa = lines.find(line => isTarikhValid(line));
+  .map(x => x.trim())
+  .filter(x => x !== '');
+
+const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${line}`.trim())];
+
+  const tarikhJumpa = gabungan.find(line => isTarikhValid(line));
 
   if (!tarikhJumpa) {
     bot.sendMessage(chatId, "❌ Gagal kesan tarikh dalam gambar.");
@@ -159,8 +167,12 @@ function semakBayarKomisen(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
   const lines = text
   .split('\n')
-  .map(x => x.replace(/^(today|tarikh|date|printed on)[:,]?\s*/i, '').trim());
-  const tarikhJumpa = lines.find(line => isTarikhValid(line));
+  .map(x => x.trim())
+  .filter(x => x !== '');
+
+const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${line}`.trim())];
+
+  const tarikhJumpa = gabungan.find(line => isTarikhValid(line));
 
   if (!tarikhJumpa) {
     bot.sendMessage(chatId, "❌ Gagal kesan tarikh dalam gambar.");
@@ -211,7 +223,11 @@ function semakBayarTransport(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
   const lines = text
   .split('\n')
-  .map(x => x.replace(/^(today|tarikh|date|printed on)[:,]?\s*/i, '').trim());
+  .map(x => x.trim())
+  .filter(x => x !== '');
+
+const gabungan = [...lines, ...lines.map((line, i) => `${lines[i - 1] || ''} ${line}`.trim())];
+
 
   // Cari tarikh dalam OCR
   const hanyaTarikh = (() => {
