@@ -7,7 +7,7 @@ let pendingUploads = {}; // Simpan pairing ikut message_id
 
 console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 
-// Step 1: Bila terima mesej jenis rasmi
+// Bila terima mesej jenis rasmi
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
 
@@ -33,46 +33,17 @@ bot.on("message", async (msg) => {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
 
+  // Hantar semula caption dan aktifkan force_reply (akan buka UI reply automatik)
   const sent = await bot.sendMessage(chatId, text, {
     reply_markup: {
-      inline_keyboard: [
-        [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
-      ]
+      force_reply: true
     }
   });
 
-  // Simpan pairing
+  // Simpan pairing supaya nanti kalau perlu semak upload, tahu asalnya dari mana
   pendingUploads[sent.message_id] = {
     detail: text,
     chatId: chatId,
-    detailMsgId: sent.message_id
+    replyTo: sent.message_id
   };
-});
-
-// Step 2: Bila user tekan butang "Upload Resit"
-bot.on("callback_query", async (callbackQuery) => {
-  const msg = callbackQuery.message;
-  const data = callbackQuery.data;
-
-  // Semak callback jenis upload
-  if (!data.startsWith("upload_")) return;
-
-  const asalMsgId = parseInt(data.replace("upload_", ""));
-  const uploadInfo = pendingUploads[msg.message_id];
-
-  if (!uploadInfo) {
-    await bot.answerCallbackQuery(callbackQuery.id, {
-      text: "❌ Resit tidak dijumpai atau telah tamat.",
-      show_alert: true
-    });
-    return;
-  }
-
-  // Bot reply semula mesej dengan arahan upload
-  await bot.sendMessage(uploadInfo.chatId, `📎 Sila upload gambar resit bagi mesej ini:\n\n<b>${uploadInfo.detail}</b>`, {
-    reply_to_message_id: uploadInfo.detailMsgId,
-    parse_mode: "HTML"
-  });
-
-  await bot.answerCallbackQuery(callbackQuery.id);
 });
