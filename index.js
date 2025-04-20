@@ -15,29 +15,6 @@ function normalizeFont(text) {
   });
 }
 
-// 🔧 Fungsi tukar hanya kategori utama jadi bold
-function boldKategoriUtama(text) {
-  const kategoriList = ["RESIT PERBELANJAAN", "BAYAR KOMISEN", "BAYAR TRANSPORT"];
-  const boldMap = {
-    A: "𝐀", B: "𝐁", C: "𝐂", D: "𝐃", E: "𝐄", F: "𝐅", G: "𝐆",
-    H: "𝐇", I: "𝐈", J: "𝐉", K: "𝐊", L: "𝐋", M: "𝐌", N: "𝐍",
-    O: "𝐎", P: "𝐏", Q: "𝐐", R: "𝐑", S: "𝐒", T: "𝐓", U: "𝐔",
-    V: "𝐕", W: "𝐖", X: "𝐗", Y: "𝐘", Z: "𝐙", " ": " "
-  };
-
-  const toBold = (word) =>
-    word.split("").map(c => boldMap[c.toUpperCase()] || c).join("");
-
-  for (const kategori of kategoriList) {
-    if (text.toUpperCase().startsWith(kategori)) {
-      const bolded = toBold(kategori);
-      return text.replace(new RegExp(kategori, "i"), bolded);
-    }
-  }
-
-  return text;
-}
-
 // Step 1: Bila terima mesej jenis rasmi
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
@@ -51,6 +28,7 @@ bot.on("message", async (msg) => {
   const isKategoriSah = namaSah.some((nama) => upperText.startsWith(nama));
   if (!isKategoriSah) return;
 
+  // ❌ Tolak mesej terlalu pendek
   if (originalText.length < 20) {
     await bot.sendMessage(chatId, "⚠️ Sila tambah maklumat seperti tarikh, lokasi dan jumlah dalam mesej.");
     return;
@@ -62,12 +40,12 @@ bot.on("message", async (msg) => {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
 
-  const cleanText = boldKategoriUtama(normalizeFont(originalText));
+  const cleanText = normalizeFont(originalText); // 🔥 buang font pelik
 
   const sent = await bot.sendMessage(chatId, cleanText, {
     reply_markup: {
       inline_keyboard: [
-        [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
+        [{ text: "📸 Upload Resit", callback_data: upload_${originalMsgId} }]
       ]
     }
   });
@@ -144,7 +122,7 @@ bot.on("photo", async (msg) => {
     console.error("❌ Gagal padam mesej detail:", e.message);
   }
 
-  const captionGabung = boldKategoriUtama(normalizeFont(resitData.detail));
+  const captionGabung = resitData.detail;
 
   const sentPhoto = await bot.sendPhoto(chatId, fileId, {
     caption: captionGabung
@@ -158,4 +136,3 @@ bot.on("photo", async (msg) => {
 
   delete pendingUploads[replyTo];
 });
-
