@@ -16,10 +16,11 @@ bot.on("message", async (msg) => {
   const text = msg.text.trim();
   const originalMsgId = msg.message_id;
 
+  const barisPertama = text.split("\n")[0].toUpperCase();
+
   // ✅ Semak jika mesej bermula dengan salah satu kategori
   const namaSah = ["RESIT PERBELANJAAN", "BAYAR KOMISEN", "BAYAR TRANSPORT"];
-  const isKategoriSah = namaSah.some((nama) => text.toUpperCase().startsWith(nama));
-  if (!isKategoriSah) return;
+  if (!namaSah.includes(barisPertama)) return;
 
   // ❌ Tolak kalau mesej terlalu pendek
   if (text.length < 20) {
@@ -33,7 +34,16 @@ bot.on("message", async (msg) => {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
 
-  const sent = await bot.sendMessage(chatId, text, {
+  // ✅ Tambah emoji tajuk atas
+  let header = barisPertama;
+  if (barisPertama === "RESIT PERBELANJAAN") header = "🧾 RESIT PERBELANJAAN";
+  if (barisPertama === "BAYAR KOMISEN") header = "💰 BAYAR KOMISEN";
+  if (barisPertama === "BAYAR TRANSPORT") header = "🚗 BAYAR TRANSPORT";
+
+  const body = text.split("\n").slice(1).join("\n");
+  const finalText = `${header}\n${body}`;
+
+  const sent = await bot.sendMessage(chatId, finalText, {
     reply_markup: {
       inline_keyboard: [
         [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
@@ -42,12 +52,8 @@ bot.on("message", async (msg) => {
   });
 
   pendingUploads[sent.message_id] = {
-    detail: text,
+    detail: finalText,
     chatId: chatId,
     detailMsgId: sent.message_id
   };
 });
-
-// Step 2 & 3 sama seperti versi sebelum — tak perlu ubah
-// (Tan Sri boleh kekalkan bahagian bawah sama macam sekarang)
-
