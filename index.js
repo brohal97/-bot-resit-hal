@@ -61,10 +61,11 @@ const sent = await bot.sendMessage(chatId, formattedText, {
 });
 
   pendingUploads[sent.message_id] = {
-    detail: text,
-    chatId: chatId,
-    replyTo: sent.message_id
-  };
+  detail: text,
+  chatId: chatId,
+  replyTo: sent.message_id,
+  captionMsgId: sent.message_id // 🆕 baris tambahan ini simpan ID caption asal
+};
 });
 
 // Bila user tekan butang "Upload Resit"
@@ -88,9 +89,10 @@ bot.on("callback_query", async (callbackQuery) => {
   const replyMsgId = await replyUITrick(uploadInfo.chatId, uploadInfo.detail, uploadInfo.replyTo);
 
 pendingUploads[replyMsgId] = {
-  detail: uploadInfo.detail,
-  chatId: uploadInfo.chatId,
-  replyTo: replyMsgId
+  detail: uploadInfo.detail,       // Teks caption asal
+  chatId: uploadInfo.chatId,       // ID group
+  replyTo: replyMsgId,             // ID mesej force_reply
+  captionMsgId: msg.message_id     // 🆕 ID mesej caption asal (yang ada butang)
 };
 
 await bot.answerCallbackQuery(callbackQuery.id);
@@ -106,12 +108,12 @@ bot.on("photo", async (msg) => {
   if (!matched) return;
 
   try {
-    // Padam gambar + force_reply
-    await bot.deleteMessage(chatId, msg.message_id);
-    await bot.deleteMessage(chatId, replyToMsg.message_id);
-  } catch (e) {
-    console.error("❌ Gagal padam mesej:", e.message);
-  }
+  await bot.deleteMessage(chatId, msg.message_id); // ❌ Gambar yang dihantar user
+  await bot.deleteMessage(chatId, replyToMsg.message_id); // ❌ Force reply "Sila hantar resit"
+  await bot.deleteMessage(chatId, matched.captionMsgId); // ❌ Caption asal yang ada butang
+} catch (e) {
+  console.error("❌ Gagal padam mesej:", e.message);
+}
 
   // Ambil file_id gambar resolusi tertinggi
   const fileId = msg.photo[msg.photo.length - 1].file_id;
