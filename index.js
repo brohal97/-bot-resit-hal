@@ -8,14 +8,15 @@ let pendingUploads = {}; // Simpan pairing ikut message_id
 console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | BAYAR KOMISEN | BAYAR TRANSPORT");
 
 // Fungsi khas aktifkan reply UI (trick)
-function replyUITrick(chatId, text, replyTo) {
-  return bot.sendMessage(chatId, `❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐫𝐚❗️`, {
+async function replyUITrick(chatId, text, replyTo) {
+  const sent = await bot.sendMessage(chatId, `❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐫𝐚❗️`, {
     reply_to_message_id: replyTo,
     parse_mode: "HTML",
     reply_markup: {
       force_reply: true
     }
   });
+  return sent.message_id;
 }
 
 // Bila terima mesej jenis rasmi
@@ -84,8 +85,16 @@ bot.on("callback_query", async (callbackQuery) => {
   }
 
   // Aktifkan trick reply UI bila user tekan butang
-  await replyUITrick(uploadInfo.chatId, uploadInfo.detail, uploadInfo.replyTo);
-  await bot.answerCallbackQuery(callbackQuery.id);
+  const replyMsgId = await replyUITrick(uploadInfo.chatId, uploadInfo.detail, uploadInfo.replyTo);
+
+pendingUploads[replyMsgId] = {
+  detail: uploadInfo.detail,
+  chatId: uploadInfo.chatId,
+  replyTo: replyMsgId
+};
+
+await bot.answerCallbackQuery(callbackQuery.id);
+
 });
 bot.on("photo", async (msg) => {
   const chatId = msg.chat.id;
@@ -93,7 +102,7 @@ bot.on("photo", async (msg) => {
 
   if (!replyToMsg) return;
 
-  const matched = Object.values(pendingUploads).find(item => item.replyTo === replyToMsg.message_id);
+  const matched = pendingUploads[replyToMsg.message_id];
   if (!matched) return;
 
   try {
