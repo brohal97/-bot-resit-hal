@@ -36,11 +36,12 @@ bot.on("message", async (msg) => {
   const sent = await bot.sendMessage(chatId, text, {
     reply_markup: {
       inline_keyboard: [
-        [{ text: "📸 Upload Resit", callback_data: upload_${originalMsgId} }]
+        [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
       ]
     }
   });
 
+  // Simpan pairing
   pendingUploads[sent.message_id] = {
     detail: text,
     chatId: chatId,
@@ -48,5 +49,26 @@ bot.on("message", async (msg) => {
   };
 });
 
-// Step 2 & 3 sama seperti versi sebelum — tak perlu ubah
-// (Tan Sri boleh kekalkan bahagian bawah sama macam sekarang)
+// Step 2: Bila user tekan butang "Upload Resit"
+bot.on("callback_query", async (callbackQuery) => {
+  const msg = callbackQuery.message;
+  const data = callbackQuery.data;
+
+  if (!data.startsWith("upload_")) return;
+
+  const asalMsgId = parseInt(data.replace("upload_", ""));
+  const uploadInfo = pendingUploads[msg.message_id];
+
+  if (!uploadInfo) {
+    await bot.answerCallbackQuery(callbackQuery.id, { text: "❌ Resit tidak dijumpai atau telah tamat." });
+    return;
+  }
+
+  // Balas mesej semula (guna reply UI)
+  await bot.sendMessage(uploadInfo.chatId, `📎 Sila upload gambar resit bagi mesej ini:\n\n<b>${uploadInfo.detail}</b>`, {
+    reply_to_message_id: uploadInfo.detailMsgId,
+    parse_mode: "HTML"
+  });
+
+  await bot.answerCallbackQuery(callbackQuery.id); // Tutup loading animation
+});
