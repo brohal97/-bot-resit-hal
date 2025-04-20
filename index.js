@@ -329,7 +329,6 @@ const caption = pendingUploads?.[msg.reply_to_message?.message_id]?.detail || ms
 
   const fileId = msg.photo[msg.photo.length - 1].file_id;
   const resitData = pendingUploads[replyTo];
-const caption = resitData?.detail || msg.caption || msg.text || "";
 
   try { await bot.deleteMessage(chatId, msg.message_id); } catch {}
   if (resitData.triggerMsgId) try { await bot.deleteMessage(chatId, resitData.triggerMsgId); } catch {}
