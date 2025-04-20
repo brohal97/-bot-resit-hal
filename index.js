@@ -338,12 +338,13 @@ function semakBayarTransport(msg, chatId, text) {
     const firstLine = detailText.split("\n")[0].toLowerCase();
 
     if (firstLine.includes("resit perbelanjaan")) {
-      // Panggil semakResitPerbelanjaan()
-    } else if (firstLine.includes("bayar komisen")) {
-      // Panggil semakBayarKomisen()
-    } else if (firstLine.includes("bayar transport")) {
-      // Panggil semakBayarTransport()
-    }
+  semakResitPerbelanjaan(msg, chatId, text);
+} else if (firstLine.includes("bayar komisen")) {
+  semakBayarKomisen(msg, chatId, text);
+} else if (firstLine.includes("bayar transport")) {
+  semakBayarTransport(msg, chatId, text);
+}
+
   } catch (err) {
     console.error("OCR Error:", err.message);
     bot.sendMessage(chatId, "❌ Gagal membaca gambar. Sila pastikan gambar jelas.");
