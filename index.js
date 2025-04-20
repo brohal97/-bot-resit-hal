@@ -7,20 +7,32 @@ let pendingUploads = {}; // Simpan pairing ikut message_id
 
 console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 
+// 🔧 Fungsi tukar font pelik kepada biasa
+function normalizeFont(text) {
+  return text.normalize("NFKD").replace(/[\u{1D400}-\u{1D7FF}]/gu, (char) => {
+    const offset = char.codePointAt(0) - 0x1D400;
+    return offset >= 0 && offset < 26 ? String.fromCharCode(65 + offset) : char;
+  });
+}
+
 // Step 1: Bila terima mesej jenis rasmi
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
-
-  // 🔒 Abaikan jika bukan mesej teks
   if (typeof msg.text !== "string") return;
 
-  const text = msg.text.trim();
+  const originalText = msg.text.trim();
+  const upperText = originalText.toUpperCase();
   const originalMsgId = msg.message_id;
 
-  // ✅ Semak jika mesej bermula dengan mana-mana nama utama
   const namaSah = ["RESIT PERBELANJAAN", "BAYAR KOMISEN", "BAYAR TRANSPORT"];
-  const isKategoriSah = namaSah.some((nama) => text.toUpperCase().startsWith(nama));
+  const isKategoriSah = namaSah.some((nama) => upperText.startsWith(nama));
   if (!isKategoriSah) return;
+
+  // ❌ Tolak mesej terlalu pendek
+  if (originalText.length < 20) {
+    await bot.sendMessage(chatId, "⚠️ Sila tambah maklumat seperti tarikh, lokasi dan jumlah dalam mesej.");
+    return;
+  }
 
   try {
     await bot.deleteMessage(chatId, originalMsgId);
@@ -28,7 +40,9 @@ bot.on("message", async (msg) => {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
 
-  const sent = await bot.sendMessage(chatId, text, {
+  const cleanText = normalizeFont(originalText); // 🔥 buang font pelik
+
+  const sent = await bot.sendMessage(chatId, cleanText, {
     reply_markup: {
       inline_keyboard: [
         [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
@@ -37,7 +51,7 @@ bot.on("message", async (msg) => {
   });
 
   pendingUploads[sent.message_id] = {
-    detail: text,
+    detail: cleanText,
     chatId: chatId,
     detailMsgId: sent.message_id
   };
@@ -108,8 +122,7 @@ bot.on("photo", async (msg) => {
     console.error("❌ Gagal padam mesej detail:", e.message);
   }
 
-  const detailText = resitData.detail.trim();
-  const captionGabung = detailText;
+  const captionGabung = resitData.detail;
 
   const sentPhoto = await bot.sendPhoto(chatId, fileId, {
     caption: captionGabung
