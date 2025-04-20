@@ -1,12 +1,12 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
-const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
-let pendingUploads = {}; // Simpan pairing ikut message_id
+let pendingUploads = {};
 
 console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 
+// Buang font pelik
 function normalizeFont(text) {
   return text.normalize("NFKD").replace(/[\u{1D400}-\u{1D7FF}]/gu, (char) => {
     const offset = char.codePointAt(0) - 0x1D400;
@@ -14,6 +14,7 @@ function normalizeFont(text) {
   });
 }
 
+// Bold kategori utama
 function boldKategoriUtama(text) {
   const kategoriList = ["RESIT PERBELANJAAN", "BAYAR KOMISEN", "BAYAR TRANSPORT"];
   const boldMap = {
@@ -23,7 +24,6 @@ function boldKategoriUtama(text) {
     V: "𝐕", W: "𝐖", X: "𝐗", Y: "𝐘", Z: "𝐙", " ": " "
   };
   const toBold = (word) => word.split("").map(c => boldMap[c.toUpperCase()] || c).join("");
-
   for (const kategori of kategoriList) {
     if (text.toUpperCase().startsWith(kategori)) {
       const bolded = toBold(kategori);
@@ -33,6 +33,7 @@ function boldKategoriUtama(text) {
   return text;
 }
 
+// Bila terima mesej teks
 bot.on("message", async (msg) => {
   console.log("📥 Mesej diterima:", msg.text);
 
@@ -69,7 +70,7 @@ bot.on("message", async (msg) => {
         ]
       }
     });
-    console.log("✅ Berjaya hantar mesej balasan");
+    console.log("✅ Mesej balasan dihantar");
 
     pendingUploads[sent.message_id] = {
       detail: cleanText,
@@ -81,6 +82,7 @@ bot.on("message", async (msg) => {
   }
 });
 
+// Bila user tekan butang Upload Resit
 bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id;
   const msgId = query.message.message_id;
@@ -90,9 +92,7 @@ bot.on("callback_query", async (query) => {
     try {
       const trigger = await bot.sendMessage(chatId, '❗️𝐒𝐢𝐥𝐚 𝐔𝐩𝐥𝐨𝐚𝐝 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚 ❗️', {
         reply_to_message_id: detailMsgId,
-        reply_markup: {
-          force_reply: true
-        }
+        reply_markup: { force_reply: true }
       });
 
       pendingUploads[trigger.message_id] = {
@@ -117,6 +117,7 @@ bot.on("callback_query", async (query) => {
   }
 });
 
+// Bila gambar dihantar sebagai reply kepada Upload Resit
 bot.on("photo", async (msg) => {
   const chatId = msg.chat.id;
   const replyTo = msg.reply_to_message?.message_id;
@@ -129,33 +130,18 @@ bot.on("photo", async (msg) => {
   const fileId = msg.photo[msg.photo.length - 1].file_id;
   const resitData = pendingUploads[replyTo];
 
-  try {
-    await bot.deleteMessage(chatId, msg.message_id);
-  } catch (e) {
-    console.error("❌ Gagal padam gambar asal:", e.message);
-  }
-
-  try {
-    await bot.deleteMessage(chatId, resitData.triggerMsgId);
-  } catch (e) {
-    console.error("❌ Gagal padam mesej trigger:", e.message);
-  }
-
-  try {
-    await bot.deleteMessage(chatId, resitData.detailMsgId);
-  } catch (e) {
-    console.error("❌ Gagal padam mesej detail:", e.message);
-  }
+  try { await bot.deleteMessage(chatId, msg.message_id); } catch (e) { }
+  try { await bot.deleteMessage(chatId, resitData.triggerMsgId); } catch (e) { }
+  try { await bot.deleteMessage(chatId, resitData.detailMsgId); } catch (e) { }
 
   const captionGabung = boldKategoriUtama(normalizeFont(resitData.detail));
 
   try {
-    const sentPhoto = await bot.sendPhoto(chatId, fileId, {
-      caption: captionGabung
-    });
-    console.log("📤 Gambar dihantar semula bersama caption");
+    const sentPhoto = await bot.sendPhoto(chatId, fileId, { caption: captionGabung });
+    console.log("📤 Gambar dihantar semula");
 
     await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
+    console.log("📨 Gambar berjaya di-forward ke channel");
   } catch (err) {
     console.error("❌ Gagal forward ke channel:", err.message);
   }
