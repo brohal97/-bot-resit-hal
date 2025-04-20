@@ -2,6 +2,11 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
+const vision = require('@google-cloud/vision');
+const visionClient = new vision.ImageAnnotatorClient({
+  keyFilename: './key.json' // Letak fail key.json dalam root folder projek
+});
+
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 let pendingUploads = {}; // Simpan pairing ikut message_id
 
@@ -17,6 +22,33 @@ async function replyUITrick(chatId, text, replyTo) {
     }
   });
   return sent.message_id;
+}
+function cariTarikhDalamText(teks) {
+  const pattern1 = /\b(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2,4})\b/;
+  const match1 = teks.match(pattern1);
+  if (match1) {
+    const [_, dd, mm, yyyy] = match1;
+    return `${yyyy.length === 2 ? '20' + yyyy : yyyy}-${pad(mm)}-${pad(dd)}`;
+  }
+
+  const pattern2 = /\b(\d{1,2})(Jan|Feb|Mac|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\-]?(20\d{2}|\d{2})\b/i;
+  const match2 = teks.match(pattern2);
+  if (match2) {
+    const [_, dd, bulan, tahun] = match2;
+    const bulanMap = {
+      Jan: '01', Feb: '02', Mac: '03', Mar: '03', Apr: '04', May: '05', Jun: '06',
+      Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12'
+    };
+    const mm = bulanMap[bulan.slice(0, 3)];
+    const yyyy = tahun.length === 2 ? '20' + tahun : tahun;
+    return `${yyyy}-${mm}-${pad(dd)}`;
+  }
+
+  return null;
+}
+
+function pad(n) {
+  return n.toString().padStart(2, '0');
 }
 
 // Bila terima mesej jenis rasmi
@@ -108,28 +140,46 @@ bot.on("photo", async (msg) => {
   if (!matched) return;
 
   try {
-  await bot.deleteMessage(chatId, msg.message_id); // ❌ Gambar yang dihantar user
-  await bot.deleteMessage(chatId, replyToMsg.message_id); // ❌ Force reply "Sila hantar resit"
-  await bot.deleteMessage(chatId, matched.captionMsgId); // ❌ Caption asal yang ada butang
-} catch (e) {
-  console.error("❌ Gagal padam mesej:", e.message);
-}
+    await bot.deleteMessage(chatId, msg.message_id); // Gambar upload
+    await bot.deleteMessage(chatId, replyToMsg.message_id); // Force reply
+    await bot.deleteMessage(chatId, matched.captionMsgId); // Caption asal
+  } catch (e) {
+    console.error("❌ Gagal padam mesej:", e.message);
+  }
 
-  // Ambil file_id gambar resolusi tertinggi
-  const fileId = msg.photo[msg.photo.length - 1].file_id;
+  // ✅ Dapatkan URL gambar dari Telegram
+  const file = await bot.getFile(msg.photo[msg.photo.length - 1].file_id);
+  const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
 
-  // Format semula caption dengan baris pertama bold
+  // ✅ Run OCR dengan Google Vision
+  const [result] = await visionClient.textDetection(fileUrl);
+  const ocrText = result.fullTextAnnotation ? result.fullTextAnnotation.text : '';
+
+  // ✅ Cari tarikh dari caption & OCR
+  const tarikhCaption = cariTarikhDalamText(matched.detail);
+  const tarikhOCR = cariTarikhDalamText(ocrText);
+
+  // ✅ Semak hanya jika RESIT PERBELANJAAN
+  if (matched.detail.toUpperCase().startsWith("RESIT PERBELANJAAN")) {
+    if (!tarikhCaption || !tarikhOCR || tarikhCaption !== tarikhOCR) {
+      await bot.sendMessage(chatId, `❌ Tarikh tidak sepadan.\n📅 Caption: ${tarikhCaption || '❓'}\n🧾 Resit: ${tarikhOCR || '❓'}`);
+      return; // Stop di sini kalau tak padan
+    }
+  }
+
+  // ✅ Format caption dengan baris pertama bold
   const lines = matched.detail.split('\n');
   const firstLine = lines[0] ? `<b>${lines[0]}</b>` : '';
   const otherLines = lines.slice(1).join('\n');
   const formattedCaption = `${firstLine}\n${otherLines}`;
 
-  // Hantar semula dalam 1 post (gambar + caption)
-  await bot.sendPhoto(chatId, fileId, {
+  // ✅ Hantar semula gambar + caption dalam 1 post
+  await bot.sendPhoto(chatId, msg.photo[msg.photo.length - 1].file_id, {
     caption: formattedCaption,
     parse_mode: "HTML"
   });
 
-  // Optional: buang dari pendingUploads
   delete pendingUploads[replyToMsg.message_id];
 });
+
+
