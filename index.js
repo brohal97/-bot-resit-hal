@@ -7,6 +7,17 @@ let pendingUploads = {}; // Simpan pairing ikut message_id
 
 console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 
+// Fungsi tukar baris pertama ke bold unicode
+function boldBarisPertama(text) {
+  const lines = text.split("\n");
+  if (lines.length === 0) return text;
+  lines[0] = lines[0]
+    .split('')
+    .map(c => /[A-Z]/.test(c) ? String.fromCharCode(c.charCodeAt(0) + 0x1D3A) : c)
+    .join('');
+  return lines.join("\n");
+}
+
 // Step 1: Bila terima mesej jenis rasmi
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
@@ -32,7 +43,9 @@ bot.on("message", async (msg) => {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
 
-  const sent = await bot.sendMessage(chatId, text, {
+  const boldText = boldBarisPertama(text); // ← bold semasa send balik caption
+
+  const sent = await bot.sendMessage(chatId, boldText, {
     reply_markup: {
       inline_keyboard: [
         [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
@@ -41,7 +54,7 @@ bot.on("message", async (msg) => {
   });
 
   pendingUploads[sent.message_id] = {
-    detail: text,
+    detail: text, // Simpan versi asal untuk reply match
     chatId: chatId,
     detailMsgId: sent.message_id
   };
@@ -113,24 +126,23 @@ bot.on("photo", async (msg) => {
   }
 
   const detailText = resitData.detail.trim();
-  const captionGabung = detailText;
+  const captionGabung = boldBarisPertama(detailText); // bold semasa send gambar + caption
 
   const sentPhoto = await bot.sendPhoto(chatId, fileId, {
     caption: captionGabung
   });
 
   try {
-    // ✅ Forward ke channel rasmi
     await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
 
-    // ✅ Tunggu 5 saat, baru padam mesej dari group
+    // Padam gambar di group selepas 5 saat
     setTimeout(async () => {
       try {
         await bot.deleteMessage(chatId, sentPhoto.message_id);
       } catch (e) {
         console.error("❌ Gagal padam gambar selepas delay:", e.message);
       }
-    }, 5000); // 5 saat
+    }, 5000);
 
   } catch (err) {
     console.error("❌ Gagal forward ke channel:", err.message);
@@ -138,3 +150,4 @@ bot.on("photo", async (msg) => {
 
   delete pendingUploads[replyTo];
 });
+
