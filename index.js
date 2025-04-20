@@ -7,7 +7,6 @@ let pendingUploads = {}; // Simpan pairing ikut message_id
 
 console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 
-// 🔧 Fungsi tukar font pelik kepada biasa
 function normalizeFont(text) {
   return text.normalize("NFKD").replace(/[\u{1D400}-\u{1D7FF}]/gu, (char) => {
     const offset = char.codePointAt(0) - 0x1D400;
@@ -15,7 +14,6 @@ function normalizeFont(text) {
   });
 }
 
-// 🔧 Fungsi tukar hanya kategori utama jadi bold
 function boldKategoriUtama(text) {
   const kategoriList = ["RESIT PERBELANJAAN", "BAYAR KOMISEN", "BAYAR TRANSPORT"];
   const boldMap = {
@@ -24,9 +22,7 @@ function boldKategoriUtama(text) {
     O: "𝐎", P: "𝐏", Q: "𝐐", R: "𝐑", S: "𝐒", T: "𝐓", U: "𝐔",
     V: "𝐕", W: "𝐖", X: "𝐗", Y: "𝐘", Z: "𝐙", " ": " "
   };
-
-  const toBold = (word) =>
-    word.split("").map(c => boldMap[c.toUpperCase()] || c).join("");
+  const toBold = (word) => word.split("").map(c => boldMap[c.toUpperCase()] || c).join("");
 
   for (const kategori of kategoriList) {
     if (text.toUpperCase().startsWith(kategori)) {
@@ -34,13 +30,12 @@ function boldKategoriUtama(text) {
       return text.replace(new RegExp(kategori, "i"), bolded);
     }
   }
-
   return text;
 }
 
-// Step 1: Bila terima mesej jenis rasmi
 bot.on("message", async (msg) => {
-console.log("📥 Mesej diterima:", msg.text);
+  console.log("📥 Mesej diterima:", msg.text);
+
   const chatId = msg.chat.id;
   if (typeof msg.text !== "string") return;
 
@@ -59,6 +54,7 @@ console.log("📥 Mesej diterima:", msg.text);
 
   try {
     await bot.deleteMessage(chatId, originalMsgId);
+    console.log("🗑 Mesej asal dipadam");
   } catch (e) {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
@@ -66,59 +62,61 @@ console.log("📥 Mesej diterima:", msg.text);
   const cleanText = boldKategoriUtama(normalizeFont(originalText));
 
   try {
-  const sent = await bot.sendMessage(chatId, cleanText, {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
-      ]
-    }
-  });
-  console.log("✅ Berjaya hantar mesej balasan");
-} catch (err) {
-  console.error("❌ Gagal hantar mesej balasan:", err.message);
-}
+    const sent = await bot.sendMessage(chatId, cleanText, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
+        ]
+      }
+    });
+    console.log("✅ Berjaya hantar mesej balasan");
 
-
-  pendingUploads[sent.message_id] = {
-    detail: cleanText,
-    chatId: chatId,
-    detailMsgId: sent.message_id
-  };
+    pendingUploads[sent.message_id] = {
+      detail: cleanText,
+      chatId: chatId,
+      detailMsgId: sent.message_id
+    };
+  } catch (err) {
+    console.error("❌ Gagal hantar mesej balasan:", err.message);
+  }
 });
 
-// Step 2: Bila tekan butang upload
 bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id;
   const msgId = query.message.message_id;
   const detailMsgId = pendingUploads[msgId]?.detailMsgId || msgId;
 
   if (pendingUploads[msgId]) {
-    const trigger = await bot.sendMessage(chatId, '❗️𝐒𝐢𝐥𝐚 𝐔𝐩𝐥𝐨𝐚𝐝 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚 ❗️', {
-      reply_to_message_id: detailMsgId,
-      reply_markup: {
-        force_reply: true
-      }
-    });
-
-    pendingUploads[trigger.message_id] = {
-      ...pendingUploads[msgId],
-      triggerMsgId: trigger.message_id
-    };
-
-    setTimeout(async () => {
-      if (pendingUploads[trigger.message_id]) {
-        try {
-          await bot.deleteMessage(chatId, trigger.message_id);
-        } catch (e) {
-          console.error("❌ Gagal auto delete reminder:", e.message);
+    try {
+      const trigger = await bot.sendMessage(chatId, '❗️𝐒𝐢𝐥𝐚 𝐔𝐩𝐥𝐨𝐚𝐝 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚 ❗️', {
+        reply_to_message_id: detailMsgId,
+        reply_markup: {
+          force_reply: true
         }
-        delete pendingUploads[trigger.message_id];
-      }
-    }, 40000);
+      });
+
+      pendingUploads[trigger.message_id] = {
+        ...pendingUploads[msgId],
+        triggerMsgId: trigger.message_id
+      };
+
+      setTimeout(async () => {
+        if (pendingUploads[trigger.message_id]) {
+          try {
+            await bot.deleteMessage(chatId, trigger.message_id);
+          } catch (e) {
+            console.error("❌ Gagal auto delete reminder:", e.message);
+          }
+          delete pendingUploads[trigger.message_id];
+        }
+      }, 40000);
+
+    } catch (err) {
+      console.error("❌ Gagal hantar reminder upload:", err.message);
+    }
   }
 });
 
-// Step 3: Bila gambar dihantar sebagai reply
 bot.on("photo", async (msg) => {
   const chatId = msg.chat.id;
   const replyTo = msg.reply_to_message?.message_id;
@@ -137,12 +135,10 @@ bot.on("photo", async (msg) => {
     console.error("❌ Gagal padam gambar asal:", e.message);
   }
 
-  if (resitData.triggerMsgId) {
-    try {
-      await bot.deleteMessage(chatId, resitData.triggerMsgId);
-    } catch (e) {
-      console.error("❌ Gagal padam mesej trigger:", e.message);
-    }
+  try {
+    await bot.deleteMessage(chatId, resitData.triggerMsgId);
+  } catch (e) {
+    console.error("❌ Gagal padam mesej trigger:", e.message);
   }
 
   try {
@@ -153,11 +149,12 @@ bot.on("photo", async (msg) => {
 
   const captionGabung = boldKategoriUtama(normalizeFont(resitData.detail));
 
-  const sentPhoto = await bot.sendPhoto(chatId, fileId, {
-    caption: captionGabung
-  });
-
   try {
+    const sentPhoto = await bot.sendPhoto(chatId, fileId, {
+      caption: captionGabung
+    });
+    console.log("📤 Gambar dihantar semula bersama caption");
+
     await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
   } catch (err) {
     console.error("❌ Gagal forward ke channel:", err.message);
