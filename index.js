@@ -123,14 +123,14 @@ bot.on("photo", async (msg) => {
     // ✅ Forward ke channel rasmi
     await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
 
-    // ✅ Tunggu 10 saat, baru padam mesej dari group
+    // ✅ Tunggu 5 saat, baru padam mesej dari group
     setTimeout(async () => {
       try {
         await bot.deleteMessage(chatId, sentPhoto.message_id);
       } catch (e) {
         console.error("❌ Gagal padam gambar selepas delay:", e.message);
       }
-    }, 10000); // 10 saat
+    }, 5000); // 5 saat
 
   } catch (err) {
     console.error("❌ Gagal forward ke channel:", err.message);
