@@ -7,13 +7,17 @@ let pendingUploads = {}; // Simpan pairing ikut message_id
 
 console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
 
-// Fungsi tukar baris pertama ke bold unicode
+// 🔧 Betul: Fungsi tukar baris pertama ke bold Unicode
 function boldBarisPertama(text) {
   const lines = text.split("\n");
   if (lines.length === 0) return text;
   lines[0] = lines[0]
     .split('')
-    .map(c => /[A-Z]/.test(c) ? String.fromCharCode(c.charCodeAt(0) + 0x1D3A) : c)
+    .map(c => {
+      if (/[A-Z]/.test(c)) return String.fromCodePoint(0x1D400 + (c.charCodeAt(0) - 65)); // A–Z
+      if (/[a-z]/.test(c)) return String.fromCodePoint(0x1D41A + (c.charCodeAt(0) - 97)); // a–z
+      return c;
+    })
     .join('');
   return lines.join("\n");
 }
@@ -43,7 +47,7 @@ bot.on("message", async (msg) => {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
 
-  const boldText = boldBarisPertama(text); // ← bold semasa send balik caption
+  const boldText = boldBarisPertama(text);
 
   const sent = await bot.sendMessage(chatId, boldText, {
     reply_markup: {
@@ -54,7 +58,7 @@ bot.on("message", async (msg) => {
   });
 
   pendingUploads[sent.message_id] = {
-    detail: text, // Simpan versi asal untuk reply match
+    detail: text,
     chatId: chatId,
     detailMsgId: sent.message_id
   };
@@ -126,7 +130,7 @@ bot.on("photo", async (msg) => {
   }
 
   const detailText = resitData.detail.trim();
-  const captionGabung = boldBarisPertama(detailText); // bold semasa send gambar + caption
+  const captionGabung = boldBarisPertama(detailText); // Bold caption sebelum hantar
 
   const sentPhoto = await bot.sendPhoto(chatId, fileId, {
     caption: captionGabung
@@ -135,7 +139,7 @@ bot.on("photo", async (msg) => {
   try {
     await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
 
-    // Padam gambar di group selepas 5 saat
+    // Padam mesej gambar di group selepas 5 saat
     setTimeout(async () => {
       try {
         await bot.deleteMessage(chatId, sentPhoto.message_id);
