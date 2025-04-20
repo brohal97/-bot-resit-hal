@@ -82,7 +82,9 @@ function isTempatLulus(text) {
 }
 function semakResitPerbelanjaan(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
-  const lines = text.split('\n').map(x => x.trim());
+  const lines = text
+  .split('\n')
+  .map(x => x.replace(/^(today|tarikh|date|printed on)[:,]?\s*/i, '').trim());
   const tarikhJumpa = lines.find(line => isTarikhValid(line));
 
   if (!tarikhJumpa) {
@@ -153,7 +155,9 @@ function semakResitPerbelanjaan(msg, chatId, text) {
 }
 function semakBayarKomisen(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
-  const lines = text.split('\n').map(x => x.trim());
+  const lines = text
+  .split('\n')
+  .map(x => x.replace(/^(today|tarikh|date|printed on)[:,]?\s*/i, '').trim());
   const tarikhJumpa = lines.find(line => isTarikhValid(line));
 
   if (!tarikhJumpa) {
