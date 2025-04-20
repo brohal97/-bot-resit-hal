@@ -54,21 +54,25 @@ bot.on("callback_query", async (callbackQuery) => {
   const msg = callbackQuery.message;
   const data = callbackQuery.data;
 
+  // Semak callback jenis upload
   if (!data.startsWith("upload_")) return;
 
   const asalMsgId = parseInt(data.replace("upload_", ""));
   const uploadInfo = pendingUploads[msg.message_id];
 
   if (!uploadInfo) {
-    await bot.answerCallbackQuery(callbackQuery.id, { text: "❌ Resit tidak dijumpai atau telah tamat." });
+    await bot.answerCallbackQuery(callbackQuery.id, {
+      text: "❌ Resit tidak dijumpai atau telah tamat.",
+      show_alert: true
+    });
     return;
   }
 
-  // Balas mesej semula (guna reply UI)
+  // Bot reply semula mesej dengan arahan upload
   await bot.sendMessage(uploadInfo.chatId, `📎 Sila upload gambar resit bagi mesej ini:\n\n<b>${uploadInfo.detail}</b>`, {
     reply_to_message_id: uploadInfo.detailMsgId,
     parse_mode: "HTML"
   });
 
-  await bot.answerCallbackQuery(callbackQuery.id); // Tutup loading animation
+  await bot.answerCallbackQuery(callbackQuery.id);
 });
