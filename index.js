@@ -5,7 +5,7 @@ const axios = require('axios');
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 let pendingUploads = {}; // Simpan pairing ikut message_id
 
-console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | KOMISEN | TRANSPORT");
+console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | BAYAR KOMISEN | BAYAR TRANSPORT");
 
 // Fungsi khas aktifkan reply UI (trick)
 function replyUITrick(chatId, text, replyTo) {
