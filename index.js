@@ -71,6 +71,8 @@ function formatTarikhStandard(text) {
     const y = clean.slice(-4);
     return `${d}-${m}-${y}`;
   }
+let match5 = clean.match(/(\d{1,2})\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/i);
+if (match5) return `${match5[1].padStart(2, '0')}-${bulanMap[match5[2].toLowerCase()] || '??'}-${match5[3]}`;
 
   return text;
 }
