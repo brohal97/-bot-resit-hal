@@ -54,7 +54,8 @@ function formatTarikhStandard(text) {
   };
 
   const clean = text.trim();
-  let match1 = clean.match(/(\d{1,2})\s+(jan|feb|...|disember)\s+(\d{4})/i);
+
+  let match1 = clean.match(/(\d{1,2})\s+(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis|january|february|march|april|may|june|july|august|september|october|november|december|januari|februari|julai|oktober|disember)\s+(\d{4})/i);
   if (match1) return `${match1[1].padStart(2, '0')}-${bulanMap[match1[2].toLowerCase()] || '??'}-${match1[3]}`;
 
   let match2 = clean.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
@@ -63,7 +64,7 @@ function formatTarikhStandard(text) {
   let match3 = clean.match(/(\d{1,2})[\/\-\.\s](\d{1,2})[\/\-\.\s](\d{2,4})/);
   if (match3) return `${match3[1].padStart(2, '0')}-${match3[2].padStart(2, '0')}-${match3[3].length === 2 ? '20' + match3[3] : match3[3]}`;
 
-  let match4 = clean.match(/(\d{1,2})(jan|feb|...|dis)\d{4}/i);
+  let match4 = clean.match(/(\d{1,2})(jan|feb|mar|mac|apr|may|mei|jun|jul|aug|ogos|sep|oct|nov|dec|dis)\d{4}/i);
   if (match4) {
     const d = match4[1].padStart(2, '0');
     const m = bulanMap[match4[2].toLowerCase()] || '??';
@@ -111,29 +112,30 @@ function semakResitPerbelanjaan(msg, chatId, text) {
     "PRIMER", "CONCEALER", "TINT", "HIGHLIGHT", "MAKEUP", "LIPSTICK",
 
     // Pakaian
-    "TOP", "TEE", "T-SHIRT", "SHIRT", "BLOUSE", "DRESS", "SKIRT", "PANTS", "JEANS",
-    "SHORTS", "KURUNG", "BAJU", "SELUAR", "JACKET", "HOODIE", "SWEATER", "UNIFORM",
-    "APPAREL", "CLOTHING", "FASHION",
+    "TOP", "TEE", "T-SHIRT", "SHIRT", "BLOUSE", "DRESS", "SKIRT",
+    "PANTS", "JEANS", "SHORTS", "KURUNG", "BAJU", "SELUAR", "JACKET",
+    "HOODIE", "SWEATER", "UNIFORM", "APPAREL", "CLOTHING", "FASHION",
 
     // Gajet
     "PHONE", "SMARTPHONE", "LAPTOP", "USB", "PRINTER", "CAMERA",
     "CHARGER", "CABLE", "EARPHONE", "MOUSE", "KEYBOARD", "TEMPERED",
     "SCREEN PROTECTOR", "POWERBANK", "MONITOR", "SPEAKER", "HEADPHONE",
 
-    // Elektrik
-    "RICE COOKER", "PERIUK", "AIR FRYER", "KIPAS", "IRON", "KETTLE", "VACUUM",
-    "TOASTER", "BLENDER", "STEAMER", "OVEN", "MICROWAVE", "AIRCOND",
-    "HEATER", "WASHING MACHINE", "CLOTH DRYER",
+    // Elektrik rumah
+    "RICE COOKER", "PERIUK", "AIR FRYER", "KIPAS", "IRON", "KETTLE",
+    "VACUUM", "TOASTER", "BLENDER", "STEAMER", "OVEN", "MICROWAVE",
+    "AIRCOND", "HEATER", "WASHING MACHINE", "CLOTH DRYER",
 
-    // Nama kedai / kesihatan
-    "WATSONS", "GUARDIAN", "SEPHORA", "FARMASI", "VITAHEALTH", "ALPRO", "CARING",
-    "BIG PHARMACY", "SUNWAY PHARMACY", "SASA", "HERMO", "NASKEEN",
+    // Nama kedai farmasi / kesihatan
+    "WATSONS", "GUARDIAN", "SEPHORA", "FARMASI", "VITAHEALTH", "ALPRO",
+    "CARING", "BIG PHARMACY", "SUNWAY PHARMACY", "SASA", "HERMO", "NASKEEN",
 
     // Makanan segera
     "KFC", "MCDONALD", "MCD", "PIZZA HUT", "DOMINO", "TEXAS", "AYAM PENYET",
-    "SUBWAY", "MARRYBROWN", "STARBUCKS", "COFFEE BEAN", "TEALIVE", "SECRET RECIPE",
-    "DUNKIN", "SUSHI KING", "BBQ PLAZA", "OLD TOWN", "PAPA JOHN", "NANDOS", "A&W",
-    "CHATIME", "BOOST JUICE", "ZUS COFFEE", "COOLBLOG", "FAMILYMART", "DAISO", "EMART", "E-MART"
+    "SUBWAY", "MARRYBROWN", "STARBUCKS", "COFFEE BEAN", "TEALIVE",
+    "SECRET RECIPE", "DUNKIN", "SUSHI KING", "BBQ PLAZA", "OLD TOWN",
+    "PAPA JOHN", "NANDOS", "A&W", "CHATIME", "BOOST JUICE", "ZUS COFFEE",
+    "COOLBLOG", "FAMILYMART", "DAISO", "EMART", "E-MART"
   ];
 
   const blacklistMatch = blacklist.filter(word => upper.includes(word));
@@ -223,7 +225,7 @@ function semakBayarTransport(msg, chatId, text) {
     return;
   }
 
-  // Step 1: Kira semua harga RM dalam caption baris produk
+  // Step 1: Kira semua harga RM dalam caption (baris produk sahaja)
   const captionLines = caption.split('\n');
   const hargaRegex = /rm\s?(\d+(?:\.\d{1,2})?)/i;
   let totalKira = 0;
@@ -233,7 +235,7 @@ function semakBayarTransport(msg, chatId, text) {
     if (match) totalKira += parseFloat(match[1]);
   }
 
-  // Step 2: Cari nilai TOTAL dalam caption
+  // Step 2: Dapatkan nilai dalam baris 'TOTAL RMxxx' dari caption
   const barisTotal = captionLines.find(line => /total|jumlah/i.test(line) && hargaRegex.test(line));
   const nilaiTotalCaption = (() => {
     const match = barisTotal?.match(hargaRegex);
@@ -245,7 +247,7 @@ function semakBayarTransport(msg, chatId, text) {
     return;
   }
 
-  // Step 3: Cari jumlah akhir RM dalam gambar OCR
+  // Step 3: Cari jumlah akhir RM dalam OCR (seluruh teks)
   const totalFinal = nilaiTotalCaption.toFixed(2);
   const ocrClean = text.replace(/[,]/g, "").toLowerCase();
   const totalPattern = new RegExp(`(rm|myr)\\s*${totalFinal}(\\.00)?`, 'i');
@@ -257,3 +259,105 @@ function semakBayarTransport(msg, chatId, text) {
 
   bot.sendMessage(chatId, `✅ BAYAR TRANSPORT LULUS\nTarikh: ${hanyaTarikh}\nJumlah: RM${totalFinal}`);
 }
+// ===================== ROUTING & HANDLER UTAMA =====================
+bot.on("message", async (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text?.trim() || "";
+  const originalMsgId = msg.message_id;
+
+  const isJenisResit = ["RESIT PERBELANJAAN", "BAYAR KOMISEN", "BAYAR TRANSPORT"].includes(text.split("\n")[0]?.toUpperCase());
+
+  if (isJenisResit && text.length >= 20) {
+    try { await bot.deleteMessage(chatId, originalMsgId); } catch {}
+
+    const boldText = boldBarisPertama(text);
+    const sent = await bot.sendMessage(chatId, boldText, {
+      reply_markup: {
+        inline_keyboard: [[{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]]
+      }
+    });
+
+    pendingUploads[sent.message_id] = {
+      detail: text,
+      chatId: chatId,
+      detailMsgId: sent.message_id
+    };
+  }
+});
+
+// ===================== BILA TEKAN BUTANG =====================
+bot.on("callback_query", async (query) => {
+  const chatId = query.message.chat.id;
+  const msgId = query.message.message_id;
+  const detailMsgId = pendingUploads[msgId]?.detailMsgId || msgId;
+
+  if (pendingUploads[msgId]) {
+    const trigger = await bot.sendMessage(chatId, '❗️𝐒𝐢𝐥𝐚 𝐔𝐩𝐥𝐨𝐚𝐝 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚 ❗️', {
+      reply_to_message_id: detailMsgId,
+      reply_markup: { force_reply: true }
+    });
+
+    pendingUploads[trigger.message_id] = {
+      ...pendingUploads[msgId],
+      triggerMsgId: trigger.message_id
+    };
+
+    setTimeout(async () => {
+      if (pendingUploads[trigger.message_id]) {
+        try { await bot.deleteMessage(chatId, trigger.message_id); } catch {}
+        delete pendingUploads[trigger.message_id];
+      }
+    }, 40000);
+  }
+});
+
+// ===================== BILA GAMBAR DIHANTAR =====================
+bot.on("photo", async (msg) => {
+  const chatId = msg.chat.id;
+  const replyTo = msg.reply_to_message?.message_id;
+
+  if (!replyTo || !pendingUploads[replyTo]) {
+    await bot.sendMessage(chatId, "⚠️ Gambar ini tidak dikaitkan dengan mana-mana resit. Sila tekan Upload Resit semula.");
+    return;
+  }
+
+  const fileId = msg.photo[msg.photo.length - 1].file_id;
+  const resitData = pendingUploads[replyTo];
+
+  try { await bot.deleteMessage(chatId, msg.message_id); } catch {}
+  if (resitData.triggerMsgId) try { await bot.deleteMessage(chatId, resitData.triggerMsgId); } catch {}
+  try { await bot.deleteMessage(chatId, resitData.detailMsgId); } catch {}
+
+  const captionGabung = boldBarisPertama(resitData.detail.trim());
+  const sentPhoto = await bot.sendPhoto(chatId, fileId, { caption: captionGabung });
+
+  try {
+    await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
+    setTimeout(async () => {
+      try { await bot.deleteMessage(chatId, sentPhoto.message_id); } catch {}
+    }, 5000);
+  } catch {}
+
+  // SEMAK RESIT OLEH BOT
+  const fileUrl = await bot.getFileLink(fileId);
+  const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+  const base64Image = Buffer.from(imageBuffer.data, 'binary').toString('base64');
+
+  const ocrRes = await axios.post(`https://vision.googleapis.com/v1/images:annotate?key=${process.env.VISION_API_KEY}`, {
+    requests: [{ image: { content: base64Image }, features: [{ type: "TEXT_DETECTION" }] }]
+  });
+
+  const ocrText = ocrRes.data.responses[0].fullTextAnnotation?.text || "";
+  const firstLine = resitData.detail.split('\n')[0].toLowerCase();
+
+  if (firstLine.includes("resit perbelanjaan")) {
+    semakResitPerbelanjaan(msg, chatId, ocrText);
+  } else if (firstLine.includes("bayar komisen")) {
+    semakBayarKomisen(msg, chatId, ocrText);
+  } else if (firstLine.includes("bayar transport")) {
+    semakBayarTransport(msg, chatId, ocrText);
+  }
+
+  delete pendingUploads[replyTo];
+});
+
