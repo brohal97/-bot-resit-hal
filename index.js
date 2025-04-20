@@ -120,7 +120,12 @@ bot.on("photo", async (msg) => {
   });
 
   try {
+    // ✅ Forward ke channel rasmi
     await bot.forwardMessage(process.env.CHANNEL_ID, chatId, sentPhoto.message_id);
+
+    // ✅ Tambahan: padam mesej gambar dari group selepas forward
+    await bot.deleteMessage(chatId, sentPhoto.message_id);
+
   } catch (err) {
     console.error("❌ Gagal forward ke channel:", err.message);
   }
