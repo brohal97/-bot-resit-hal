@@ -40,6 +40,7 @@ function boldKategoriUtama(text) {
 
 // Step 1: Bila terima mesej jenis rasmi
 bot.on("message", async (msg) => {
+console.log("📥 Mesej diterima:", msg.text);
   const chatId = msg.chat.id;
   if (typeof msg.text !== "string") return;
 
