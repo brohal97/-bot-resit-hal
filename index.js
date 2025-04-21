@@ -88,6 +88,7 @@ function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption
 
   return `✅ Resit disahkan: *${tarikhOCR}*`;
 }
+// =================== [ SEMAK BAYAR KOMISEN – UNTUK SISTEM UTAMA ] ===================
 function semakBayarKomisen(msg, chatId, text) {
   const caption = msg.caption || msg.text || "";
   const lines = text.split('\n').map(x => x.trim());
@@ -110,7 +111,6 @@ function semakBayarKomisen(msg, chatId, text) {
     return;
   }
 
-  // Fungsi bantu untuk dapatkan nilai dari caption
   const getValue = (label) => {
     const regex = new RegExp(label + "\\s*[:：]\\s*(.+)", "i");
     const match = caption.match(regex);
@@ -136,13 +136,22 @@ function semakBayarKomisen(msg, chatId, text) {
     gagal.push("jumlah total");
   }
 
-  if (gagal.length) {
-    bot.sendMessage(chatId, `❌ BAYAR KOMISEN gagal diluluskan.\nSebab tidak padan: ${gagal.join(", ")}`);
-    return;
-  }
+  const semakanStatus = gagal.length
+    ? `❌ BAYAR KOMISEN gagal diluluskan.\nSebab tidak padan: ${gagal.join(", ")}`
+    : `✅ BAYAR KOMISEN LULUS\nTarikh: ${hanyaTarikh}`;
 
-  bot.sendMessage(chatId, `✅ BAYAR KOMISEN LULUS\nTarikh: ${hanyaTarikh}`);
-} 
+  const photoFileId = msg.photo?.[msg.photo.length - 1]?.file_id;
+  if (photoFileId) {
+    const lines = caption.split('\n');
+    const formattedCaption = `*${lines[0]}*\n` + lines.slice(1).join('\n') + `\n\n${semakanStatus}`;
+    bot.sendPhoto(chatId, photoFileId, {
+      caption: formattedCaption,
+      parse_mode: "Markdown"
+    });
+  } else {
+    bot.sendMessage(chatId, semakanStatus);
+  }
+}
 
 // =================== [ PAIRING STORAGE ] ===================
 let pendingUploads = {};
