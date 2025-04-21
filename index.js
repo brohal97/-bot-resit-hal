@@ -100,16 +100,16 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
 
   // 2. Semak nama bank (normalize spacing)
   const normalize = str => str.toLowerCase().replace(/\s+/g, '');
-  const bankList = [
+  // 2. Semak nama bank (berpandukan caption, cari longgar dalam OCR)
+const bankList = [
   'maybank', 'cimb', 'bank islam', 'rhb',
   'ambank', 'bsn', 'agrobank', 'bank muamalat', 'muamalat'
 ];
 
-const captionHasBank = bankList.find(bank => captionLower.includes(bank));
-if (!captionHasBank || !ocrLower.includes(captionHasBank)) {
+const bankFromCaption = bankList.find(bank => captionLower.includes(bank));
+if (!bankFromCaption || !ocrLower.includes(bankFromCaption)) {
   return `❌ Nama bank tidak padan.`;
 }
-
   // 3. Semak nombor akaun (berpandukan caption, cari dalam OCR tanpa spacing)
   const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
   const ocrClean = ocrLower.replace(/\s+/g, '');
