@@ -117,7 +117,7 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
     return `❌ Nombor akaun tidak padan.`;
   }
 
-  // 4. Semak jumlah (normalize dan nilai padanan sahaja)
+  // 4. Semak jumlah (normalize dan padankan dari baris TOTAL sahaja dalam caption)
   function normalizeJumlah(str) {
     return parseFloat(
       str.replace(/,/g, '').replace(/(rm|myr)/gi, '').trim()
@@ -125,7 +125,10 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
   }
 
   const jumlahOCRraw = ocrLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
-  const jumlahCaptionRaw = captionLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+
+  const captionLines = captionLower.split('\n');
+  const totalLine = captionLines.find(line => /total/.test(line) && /(rm|myr)/.test(line));
+  const jumlahCaptionRaw = totalLine?.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
 
   if (!jumlahOCRraw || !jumlahCaptionRaw) {
     return `❌ Jumlah tidak dapat dipastikan.`;
