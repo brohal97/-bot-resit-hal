@@ -51,23 +51,6 @@ function pad(n) {
   return n.toString().padStart(2, '0');
 }
 
-
-  const pattern2 = /\b(\d{1,2})(Jan|Feb|Mac|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\-]?(20\d{2}|\d{2})\b/i;
-  const match2 = teks.match(pattern2);
-  if (match2) {
-    const [_, dd, bulan, tahun] = match2;
-    const bulanMap = {
-      Jan: '01', Feb: '02', Mac: '03', Mar: '03', Apr: '04', May: '05', Jun: '06',
-      Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12'
-    };
-    const mm = bulanMap[bulan.slice(0, 3)];
-    const yyyy = tahun.length === 2 ? '20' + tahun : tahun;
-    return `${yyyy}-${mm}-${pad(dd)}`;
-  }
-
-  return null;
-}
-
 function pad(n) {
   return n.toString().padStart(2, '0');
 }
