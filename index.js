@@ -66,7 +66,7 @@ async function extractTarikhFromImage(fileUrl) {
   }
 }
 
-// =================== [ PAIRING STORAGE ] ===================
+// =================== [ STORAGE UNTUK PAIRING ] ===================
 let pendingUploads = {};
 
 // =================== [ FUNGSI 1: Caption Masuk ➜ Padam & Butang ] ===================
@@ -81,7 +81,7 @@ bot.on('message', async (msg) => {
     console.log("❌ Gagal padam mesej asal:", err.message);
   });
 
-  await bot.sendMessage(chatId, `📩 *${text}*`, {
+  await bot.sendMessage(chatId, `*${text}*`, {
     parse_mode: "Markdown",
     reply_markup: {
       inline_keyboard: [
@@ -116,7 +116,7 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// =================== [ FUNGSI 3: Reply Gambar ➜ OCR + Gabung + Padam ] ===================
+// =================== [ FUNGSI 3: Reply Gambar ➜ OCR + Gabung + Semakan + Padam ] ===================
 bot.on('photo', async (msg) => {
   const userId = msg.from.id;
   const chatId = msg.chat.id;
@@ -148,14 +148,18 @@ bot.on('photo', async (msg) => {
     semakan = `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR}*\n✍️ Caption: *${tarikhCaption}*`;
   }
 
-  // Padam mesej asal (gambar + prompt + caption asal)
+  // Format caption: baris pertama bold sahaja
+  const lines = captionText.split('\n');
+  const formattedCaption = `*${lines[0]}*\n` + lines.slice(1).join('\n');
+
+  // Padam semua mesej lama
   await bot.deleteMessage(chatId, messageId).catch(() => {});
   await bot.deleteMessage(chatId, forceReplyTo).catch(() => {});
   await bot.deleteMessage(chatId, promptMsgId).catch(() => {});
 
-  // Gabung semula sebagai 1 post
+  // Hantar gambar + caption + semakan
   await bot.sendPhoto(chatId, fileId, {
-    caption: `📩 ${captionText}\n\n${semakan}`,
+    caption: `${formattedCaption}\n\n${semakan}`,
     parse_mode: "Markdown"
   });
 
