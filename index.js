@@ -9,7 +9,7 @@ console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | BAYAR KOMISEN | BAYAR TRANS
 
 // Fungsi khas aktifkan reply UI (trick)
 async function replyUITrick(chatId, text, replyTo) {
-  const sent = await bot.sendMessage(chatId, ❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐫𝐚❗️, {
+  const sent = await bot.sendMessage(chatId, '❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐫𝐚❗️', {
     reply_to_message_id: replyTo,
     parse_mode: "HTML",
     reply_markup: {
