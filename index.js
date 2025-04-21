@@ -98,7 +98,7 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
     return `❌ Tarikh tidak padan.`;
   }
 
-  const bankMatch = /(maybank|cimb|bank islam|rhb|ambank|bsn|agrobank)/;
+  const bankMatch = /(maybank|cimb|bank islam|rhb|ambank|bsn|agrobank|muamalat)/;
   const bankOCR = ocrLower.match(bankMatch)?.[0];
   const bankCaption = captionLower.match(bankMatch)?.[0];
   if (!bankOCR || !bankCaption || bankOCR !== bankCaption) {
