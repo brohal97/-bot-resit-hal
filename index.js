@@ -88,7 +88,36 @@ function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption
 
   return `✅ Resit disahkan: *${tarikhOCR}*`;
 }
+// =================== [ SEMAK BAYAR KOMISEN ] ===================
+function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
+  const ocrLower = ocrText.toLowerCase();
+  const captionLower = captionText.toLowerCase();
 
+  if (tarikhOCR !== tarikhCaption) {
+    return `❌ Tarikh tidak padan.`;
+  }
+
+  const bankMatch = /(maybank|cimb|bank islam|rhb|ambank|bsn|agrobank|muamalat)/;
+  const bankOCR = ocrLower.match(bankMatch)?.[0];
+  const bankCaption = captionLower.match(bankMatch)?.[0];
+  if (!bankOCR || !bankCaption || bankOCR !== bankCaption) {
+    return `❌ Nama bank tidak padan.`;
+  }
+
+  const noAkaunOCR = ocrLower.match(/\b\d{10,16}\b/);
+  const noAkaunCaption = captionLower.match(/\b\d{10,16}\b/);
+  if (!noAkaunOCR || !noAkaunCaption || noAkaunOCR[0] !== noAkaunCaption[0]) {
+    return `❌ Nombor akaun tidak padan.`;
+  }
+
+  const jumlahOCR = ocrLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+  const jumlahCaption = captionLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+  if (!jumlahOCR || !jumlahCaption || jumlahOCR[0] !== jumlahCaption[0]) {
+    return `❌ Jumlah tidak padan.`;
+  }
+
+  return `✅ Komisen disahkan: *${jumlahOCR[0].toUpperCase()}*`;
+}
 // =================== [ PAIRING STORAGE ] ===================
 let pendingUploads = {};
 
@@ -163,10 +192,12 @@ bot.on('photo', async (msg) => {
   const jenis = captionText.split('\n')[0].trim().toUpperCase();
 
   if (jenis.includes("RESIT PERBELANJAAN")) {
-    semakan = semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR: tarikh, tarikhCaption });
-  } else {
-    semakan = `⚠️ Jenis resit tidak dikenali.`;
-  }
+  semakan = semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR: tarikh, tarikhCaption });
+} else if (jenis.includes("BAYAR KOMISEN")) {
+  semakan = semakBayarKomisen({ ocrText, captionText, tarikhOCR: tarikh, tarikhCaption });
+} else {
+  semakan = '⚠️ Jenis resit tidak dikenali.';
+}
 
   const lines = captionText.split('\n');
   const formattedCaption = `*${lines[0]}*\n` + lines.slice(1).join('\n');
