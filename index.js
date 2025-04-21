@@ -152,6 +152,58 @@ if (!noAkaunCaption || !padanAkaun) {
 
   return `✅ BAYAR KOMISEN LULUS\nTarikh: ${tarikhCaption}`;
 }
+// =================== [ SEMAK BAYAR TRANSPORT – VERSI FINAL DENGAN RM/MYR SAHAJA ] ===================
+function semakBayarTransport({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
+  const ocrLower = ocrText.toLowerCase();
+  const captionLower = captionText.toLowerCase();
+
+  // 1. Semak tarikh
+  if (tarikhOCR !== tarikhCaption) {
+    return `❌ Tarikh tidak padan.\n📸 Gambar: *${tarikhOCR}*\n✍️ Caption: *${tarikhCaption}*`;
+  }
+
+  // 2. Kira jumlah dari senarai produk (abaikan baris 'total')
+  let totalKira = 0;
+  const captionLines = captionLower.split('\n');
+  const hargaRegex = /rm\s?(\d+(?:\.\d{1,2})?)/;
+  for (let line of captionLines) {
+    if (/total/.test(line)) continue;
+    const match = line.match(hargaRegex);
+    if (match) totalKira += parseFloat(match[1]);
+  }
+
+  // 3. Ambil jumlah dari baris 'Total'
+  const totalLine = captionLines.find(line => /total/.test(line) && /(rm|myr)/.test(line));
+  const jumlahCaptionRaw = totalLine?.match(/(rm|myr)\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+
+  // 4. Cari jumlah dalam OCR (mesti ada RM/MYR sahaja)
+  const jumlahOCRraw = ocrLower.match(/(rm|myr)\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+
+  if (!jumlahOCRraw || !jumlahCaptionRaw) {
+    return `❌ Jumlah tidak dapat dipastikan.`;
+  }
+
+  // 5. Normalize dan bandingkan
+  function normalizeJumlah(str) {
+    return parseFloat(
+      str.replace(/,/g, '').replace(/(rm|myr)/gi, '').trim()
+    ).toFixed(2);
+  }
+
+  const jumlahOCR = normalizeJumlah(jumlahOCRraw[0]);
+  const jumlahCaption = normalizeJumlah(jumlahCaptionRaw[0]);
+  const jumlahKiraan = totalKira.toFixed(2);
+
+  if (jumlahKiraan !== jumlahCaption) {
+    return `❌ Jumlah dalam baris TOTAL (RM${jumlahCaption}) tidak sama dengan hasil kiraan (RM${jumlahKiraan}).`;
+  }
+
+  if (jumlahOCR !== jumlahCaption) {
+    return `❌ Jumlah tidak padan antara slip dan caption.\n📸 Slip: *RM${jumlahOCR}*\n✍️ Caption: *RM${jumlahCaption}*`;
+  }
+
+  return `✅ BAYAR TRANSPORT LULUS\nTarikh: ${tarikhCaption}`;
+}
 
 // =================== [ PAIRING STORAGE ] ===================
 let pendingUploads = {};
@@ -230,6 +282,8 @@ bot.on('photo', async (msg) => {
   semakan = semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR: tarikh, tarikhCaption });
 } else if (jenis.includes("BAYAR KOMISEN")) {
   semakan = semakBayarKomisen({ ocrText, captionText, tarikhOCR: tarikh, tarikhCaption });
+} else if (jenis.includes("BAYAR TRANSPORT")) {
+  semakan = semakBayarTransport({ ocrText, captionText, tarikhOCR: tarikh, tarikhCaption });
 } else {
   semakan = '⚠️ Jenis resit tidak dikenali.';
 }
