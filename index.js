@@ -74,7 +74,22 @@ function formatTarikhStandard(text) {
 function cariTarikhDalamText(teks) {
   return formatTarikhStandard(teks);
 }
+function extractTarikhFromOCRAndCaption(ocrText, captionText) {
+  const ocrLine = ocrText
+    .split(/\n|\|/)
+    .map(line => line.trim())
+    .find(line => isTarikhValid(line)) || '';
 
+  const captionLine = captionText
+    .split(/\n|\|/)
+    .map(line => line.trim())
+    .find(line => isTarikhValid(line)) || '';
+
+  const tarikhOCR = cariTarikhDalamText(ocrLine);
+  const tarikhCaption = cariTarikhDalamText(captionLine);
+
+  return { tarikhOCR, tarikhCaption };
+}
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   if (typeof msg.text !== "string") return;
