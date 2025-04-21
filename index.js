@@ -89,58 +89,63 @@ function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption
   return `✅ Resit disahkan: *${tarikhOCR}*`;
 }
 // =================== [ SEMAK BAYAR KOMISEN – FINAL STABIL ] ===================
-function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
-  const ocrLower = ocrText.toLowerCase();
-  const captionLower = captionText.toLowerCase();
-
-  // 1. Semak tarikh
-  if (tarikhOCR !== tarikhCaption) {
-    return `❌ Tarikh tidak padan.`;
-  }
-
-  // 2. Semak nama bank (normalize spacing)
-  const normalize = str => str.toLowerCase().replace(/\s+/g, '');
-  const bankList = [
-    'maybank', 'cimb', 'bankislam', 'rhb',
-    'ambank', 'bsn', 'agrobank', 'bankmuamalat', 'muamalat'
-  ];
-  const bankOCR = bankList.find(bank => normalize(ocrText).includes(bank));
-  const bankCaption = bankList.find(bank => normalize(captionText).includes(bank));
-  if (!bankOCR || !bankCaption) {
-    return `❌ Nama bank tidak padan.`;
-  }
-
-  // 3. Semak nombor akaun (ambil dari caption, cari dalam OCR tanpa spacing)
-const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
-const ocrClean = ocrLower.replace(/\s+/g, '');
-
-if (!noAkaunCaption || !ocrClean.includes(noAkaunCaption)) {
-  return `❌ Nombor akaun tidak padan.`;
+bot.sendMessage(chatId, `✅ BAYAR KOMISEN LULUS\nTarikh: ${hanyaTarikh}`);
 }
+function semakBayarTransport(msg, chatId, text) {
+  const caption = msg.caption || msg.text || "";
+  const lines = text.split('\n').map(x => x.trim());
 
-  // 4. Semak jumlah (normalize & format)
-  function normalizeJumlah(str) {
-    return parseFloat(
-      str.replace(/,/g, '').replace(/(rm|myr)/gi, '').trim()
-    ).toFixed(2);
+  // Cari tarikh dalam OCR
+  const hanyaTarikh = (() => {
+    const t = lines.find(line => isTarikhValid(line));
+    return t ? formatTarikhStandard(t) : null;
+  })();
+
+  // Cari tarikh dalam caption
+  let tarikhDalamCaption = null;
+  for (let word of caption.split(/\s+/)) {
+    if (isTarikhValid(word)) {
+      tarikhDalamCaption = formatTarikhStandard(word);
+      break;
+    }
   }
 
-  const jumlahOCRraw = ocrLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
-  const jumlahCaptionRaw = captionLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
-
-  if (!jumlahOCRraw || !jumlahCaptionRaw) {
-    return `❌ Jumlah tidak dapat dipastikan.`;
+  if (!hanyaTarikh || !tarikhDalamCaption || tarikhDalamCaption !== hanyaTarikh) {
+    bot.sendMessage(chatId, `❌ Tarikh dalam gambar (${hanyaTarikh || "-"}) tidak padan dengan tarikh dalam teks.`);
+    return;
   }
 
-  const jumlahOCR = normalizeJumlah(jumlahOCRraw[0]);
-  const jumlahCaption = normalizeJumlah(jumlahCaptionRaw[0]);
-
-  if (jumlahOCR !== jumlahCaption) {
-    return `❌ Jumlah tidak padan.\n📸 Slip: *RM${jumlahOCR}*\n✍️ Caption: *RM${jumlahCaption}*`;
+  // Step 1: Kira semua harga RM dalam caption baris produk
+  const captionLines = caption.split('\n');
+  const hargaRegex = /rm\s?(\d+(?:\.\d{1,2})?)/i;
+  let totalKira = 0;
+  for (let line of captionLines) {
+    if (/total/i.test(line)) continue; // abaikan baris 'TOTAL'
+    const match = line.match(hargaRegex);
+    if (match) totalKira += parseFloat(match[1]);
   }
 
-  return `✅ Komisen disahkan: *RM${jumlahOCR}*`;
-}
+  // Step 2: Dapatkan nilai dalam baris 'TOTAL RMxxx' dari caption
+  const barisTotal = captionLines.find(line => /total/i.test(line) && hargaRegex.test(line));
+  const nilaiTotalCaption = (() => {
+    const match = barisTotal?.match(hargaRegex);
+    return match ? parseFloat(match[1]) : null;
+  })();
+
+  if (!nilaiTotalCaption || Math.abs(nilaiTotalCaption - totalKira) > 0.01) {
+    bot.sendMessage(chatId, `❌ Jumlah dalam baris TOTAL (RM${nilaiTotalCaption || "?"}) tidak sama dengan hasil kiraan (RM${totalKira.toFixed(2)}).`);
+    return;
+  }
+
+  // Step 3: Cari jumlah RM dalam OCR (seluruh teks)
+  const totalFinal = nilaiTotalCaption.toFixed(2);
+  const ocrClean = text.replace(/[,]/g, "").toLowerCase();
+  const totalPattern = new RegExp(`(rm|myr)\\s*${totalFinal}(\\.00)?`, 'i');
+
+  if (!ocrClean.match(totalPattern)) {
+    bot.sendMessage(chatId, `❌ BAYAR TRANSPORT gagal diluluskan.\nSebab: jumlah RM${totalFinal} tidak ditemui dalam gambar.`);
+    return;
+  }
 
 // =================== [ PAIRING STORAGE ] ===================
 let pendingUploads = {};
