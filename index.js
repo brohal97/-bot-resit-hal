@@ -89,97 +89,34 @@ function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption
   return `✅ Resit disahkan: *${tarikhOCR}*`;
 }
 
-// =================== [ PAIRING STORAGE ] ===================
-let pendingUploads = {};
+// =================== [ SEMAK BAYAR KOMISEN ] ===================
+function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
+  const ocrLower = ocrText.toLowerCase();
+  const captionLower = captionText.toLowerCase();
 
-// =================== [ FUNGSI 1: Caption Masuk ➜ Padam & Butang ] ===================
-bot.on('message', async (msg) => {
-  const chatId = msg.chat.id;
-  const messageId = msg.message_id;
-  const text = msg.text;
-
-  if (!text || msg.photo || msg.document || msg.caption || msg.reply_to_message) return;
-
-  await bot.deleteMessage(chatId, messageId).catch(() => {});
-  await bot.sendMessage(chatId, `*${text}*`, {
-    parse_mode: "Markdown",
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: "✅ Upload Resit", callback_data: `upload_${messageId}` }]
-      ]
-    }
-  });
-});
-
-// =================== [ FUNGSI 2: Tekan Butang ➜ Force Reply + Prompt ] ===================
-bot.on('callback_query', async (query) => {
-  const chatId = query.message.chat.id;
-  const messageId = query.message.message_id;
-  const userId = query.from.id;
-  const data = query.data;
-
-  if (data.startsWith('upload_')) {
-    const captionText = query.message.text || '';
-
-    await bot.answerCallbackQuery({ callback_query_id: query.id });
-
-    const promptMsg = await bot.sendMessage(chatId, `❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚❗️ `, {
-      reply_markup: { force_reply: true },
-      reply_to_message_id: messageId
-    });
-
-    pendingUploads[userId] = {
-      captionText,
-      forceReplyTo: messageId,
-      promptMsgId: promptMsg.message_id
-    };
-  }
-});
-
-// =================== [ FUNGSI 3: Reply Gambar ➜ OCR + Gabung + Semakan + Padam ] ===================
-bot.on('photo', async (msg) => {
-  const userId = msg.from.id;
-  const chatId = msg.chat.id;
-  const messageId = msg.message_id;
-  const replyTo = msg.reply_to_message?.message_id || null;
-
-  if (!pendingUploads[userId] || !replyTo) {
-    return bot.sendMessage(chatId, `⚠️ Sila tekan butang "Upload Resit" dan reply dengan gambar.`, {
-      reply_to_message_id: messageId
-    });
+  if (tarikhOCR !== tarikhCaption) {
+    return `❌ Tarikh tidak padan.`;
   }
 
-  const { captionText, forceReplyTo, promptMsgId } = pendingUploads[userId];
-  const photos = msg.photo;
-  const fileId = photos[photos.length - 1].file_id;
-
-  const file = await bot.getFile(fileId);
-  const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
-
-  const { tarikh, ocrText } = await extractTarikhFromImage(fileUrl);
-  const tarikhCaption = detectAndFormatDateFromText(captionText);
-
-  let semakan = '';
-  const jenis = captionText.split('\n')[0].trim().toUpperCase();
-
-  if (jenis.includes("RESIT PERBELANJAAN")) {
-    semakan = semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR: tarikh, tarikhCaption });
-  } else {
-    semakan = `⚠️ Jenis resit tidak dikenali.`;
+  const bankMatch = /(maybank|cimb|bank islam|rhb|ambank|bsn|agrobank)/;
+  const bankOCR = ocrLower.match(bankMatch)?.[0];
+  const bankCaption = captionLower.match(bankMatch)?.[0];
+  if (!bankOCR || !bankCaption || bankOCR !== bankCaption) {
+    return `❌ Nama bank tidak padan.`;
   }
 
-  const lines = captionText.split('\n');
-  const formattedCaption = `*${lines[0]}*\n` + lines.slice(1).join('\n');
+  const noAkaunOCR = ocrLower.match(/\b\d{10,16}\b/);
+  const noAkaunCaption = captionLower.match(/\b\d{10,16}\b/);
+  if (!noAkaunOCR || !noAkaunCaption || noAkaunOCR[0] !== noAkaunCaption[0]) {
+    return `❌ Nombor akaun tidak padan.`;
+  }
 
-  await bot.deleteMessage(chatId, messageId).catch(() => {});
-  await bot.deleteMessage(chatId, forceReplyTo).catch(() => {});
-  await bot.deleteMessage(chatId, promptMsgId).catch(() => {});
+  const jumlahOCR = ocrLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+  const jumlahCaption = captionLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+  if (!jumlahOCR || !jumlahCaption || jumlahOCR[0] !== jumlahCaption[0]) {
+    return `❌ Jumlah tidak padan.`;
+  }
 
-  await bot.sendPhoto(chatId, fileId, {
-    caption: `${formattedCaption}\n\n${semakan}`,
-    parse_mode: "Markdown"
-  });
-
-  delete pendingUploads[userId];
-});
+  return `✅ Komisen disahkan: *${jumlahOCR[0].toUpperCase()}*`;
+}
 
