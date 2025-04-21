@@ -108,7 +108,7 @@ const bankList = [
 const bankOCR = bankList.find(bank => normalize(ocrText).includes(bank));
 const bankCaption = bankList.find(bank => normalize(captionText).includes(bank));
 
-if (!bankOCR || !bankCaption || bankOCR !== bankCaption) {
+if (!bankOCR || !bankCaption) {
   return `❌ Nama bank tidak padan.`;
 }
 
