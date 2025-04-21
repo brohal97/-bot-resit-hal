@@ -119,27 +119,31 @@ bot.on("photo", async (msg) => {
     await bot.sendChatAction(chatId, 'upload_photo');
     const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' }).then(res => Buffer.from(res.data, 'binary'));
 
-    await bot.deleteMessage(chatId, msg.message_id);
-    await bot.deleteMessage(chatId, replyToMsg.message_id);
-    await bot.deleteMessage(chatId, matched.captionMsgId);
-
     await bot.sendPhoto(chatId, imageBuffer, {
       caption: formattedCaption,
       parse_mode: "HTML"
     });
 
+    await bot.deleteMessage(chatId, msg.message_id);
+    await bot.deleteMessage(chatId, replyToMsg.message_id);
+    await bot.deleteMessage(chatId, matched.captionMsgId);
+
     if (matched.detail.toUpperCase().startsWith("RESIT PERBELANJAAN")) {
       const visionResponse = await axios.post(
         `https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}`,
         {
-          requests: [{
-            image: { source: { imageUri: fileUrl } },
-            features: [{ type: 'TEXT_DETECTION' }]
-          }]
+          requests: [
+            {
+              image: { source: { imageUri: fileUrl } },
+              features: [{ type: 'TEXT_DETECTION' }]
+            }
+          ]
         }
       );
 
-      const ocrText = visionResponse.data.responses[0].fullTextAnnotation?.text || '';
+      const response = visionResponse.data.responses[0];
+      const ocrText = response.fullTextAnnotation?.text || response.textAnnotations?.[0]?.description || '';
+
       const tarikhCaption = cariTarikhDalamText(matched.detail);
       const tarikhOCR = cariTarikhDalamText(ocrText);
 
@@ -161,3 +165,4 @@ bot.on("photo", async (msg) => {
     console.error("❌ Error hantar semula gambar:", e.message);
   }
 });
+
