@@ -66,9 +66,10 @@ async function extractTarikhFromImage(fileUrl) {
   }
 }
 
-// =================== [ FUNGSI 1: Caption Masuk ➜ Padam & Butang ] ===================
+// =================== [ PAIRING STORAGE ] ===================
 let pendingUploads = {};
 
+// =================== [ FUNGSI 1: Caption Masuk ➜ Padam & Butang ] ===================
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const messageId = msg.message_id;
@@ -90,7 +91,7 @@ bot.on('message', async (msg) => {
   });
 });
 
-// =================== [ FUNGSI 2: Tekan Butang ➜ Force Reply Aktif ] ===================
+// =================== [ FUNGSI 2: Tekan Butang ➜ Force Reply + Prompt ] ===================
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const messageId = query.message.message_id;
@@ -98,21 +99,24 @@ bot.on('callback_query', async (query) => {
   const data = query.data;
 
   if (data.startsWith('upload_')) {
-    pendingUploads[userId] = {
-      captionText: query.message.text || '',
-      forceReplyTo: messageId
-    };
+    const captionText = query.message.text || '';
 
     await bot.answerCallbackQuery({ callback_query_id: query.id });
 
-    await bot.sendMessage(chatId, `📤 Sila reply mesej ini dengan gambar resit anda.`, {
+    const promptMsg = await bot.sendMessage(chatId, `❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚❗️`, {
       reply_markup: { force_reply: true },
       reply_to_message_id: messageId
     });
+
+    pendingUploads[userId] = {
+      captionText,
+      forceReplyTo: messageId,
+      promptMsgId: promptMsg.message_id
+    };
   }
 });
 
-// =================== [ FUNGSI 3: User Reply Gambar ➜ OCR + Gabung + Semakan ] ===================
+// =================== [ FUNGSI 3: Reply Gambar ➜ OCR + Gabung + Padam ] ===================
 bot.on('photo', async (msg) => {
   const userId = msg.from.id;
   const chatId = msg.chat.id;
@@ -125,7 +129,7 @@ bot.on('photo', async (msg) => {
     });
   }
 
-  const { captionText, forceReplyTo } = pendingUploads[userId];
+  const { captionText, forceReplyTo, promptMsgId } = pendingUploads[userId];
   const photos = msg.photo;
   const fileId = photos[photos.length - 1].file_id;
 
@@ -144,11 +148,12 @@ bot.on('photo', async (msg) => {
     semakan = `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR}*\n✍️ Caption: *${tarikhCaption}*`;
   }
 
-  // Padam mesej asal
+  // Padam mesej asal (gambar + prompt + caption asal)
   await bot.deleteMessage(chatId, messageId).catch(() => {});
   await bot.deleteMessage(chatId, forceReplyTo).catch(() => {});
+  await bot.deleteMessage(chatId, promptMsgId).catch(() => {});
 
-  // Hantar semula sebagai satu post (gambar + caption + hasil semakan)
+  // Gabung semula sebagai 1 post
   await bot.sendPhoto(chatId, fileId, {
     caption: `📩 ${captionText}\n\n${semakan}`,
     parse_mode: "Markdown"
