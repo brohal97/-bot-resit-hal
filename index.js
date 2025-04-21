@@ -203,8 +203,10 @@ const ocrLine = ocrText
   .find(line => isTarikhValid(line)) || '';
 
 // Format ke bentuk standard (dd-mm-yyyy)
-const tarikhCaption = cariTarikhDalamText(captionLine);
-const tarikhOCR = cariTarikhDalamText(ocrLine);
+const { tarikhOCR, tarikhCaption } = extractTarikhFromOCRAndCaption(ocrText, matched.detail);
+
+console.log("📅 Caption Tarikh:", tarikhCaption);
+console.log("🧾 OCR Tarikh:", tarikhOCR);
 
 // Debug log untuk semak dalam Railway log
 console.log("📅 CaptionLine:", captionLine);
