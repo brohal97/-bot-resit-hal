@@ -2,11 +2,6 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
-const vision = require('@google-cloud/vision');
-const visionClient = new vision.ImageAnnotatorClient({
-  keyFilename: './key.json'
-});
-
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 let pendingUploads = {};
 
@@ -21,32 +16,6 @@ async function replyUITrick(chatId, text, replyTo) {
     }
   });
   return sent.message_id;
-}
-
-function cariTarikhDalamText(teks) {
-  const pattern1 = /\b(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})\b/;
-  const match1 = teks.match(pattern1);
-  if (match1) {
-    const [_, dd, mm, yyyy] = match1;
-    return `${yyyy.length === 2 ? '20' + yyyy : yyyy}-${pad(mm)}-${pad(dd)}`;
-  }
-  const pattern2 = /\b(\d{1,2})(Jan|Feb|Mac|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[\s\-]?(20\d{2}|\d{2})\b/i;
-  const match2 = teks.match(pattern2);
-  if (match2) {
-    const [_, dd, bulan, tahun] = match2;
-    const bulanMap = {
-      Jan: '01', Feb: '02', Mac: '03', Mar: '03', Apr: '04', May: '05', Jun: '06',
-      Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12'
-    };
-    const mm = bulanMap[bulan.slice(0, 3)];
-    const yyyy = tahun.length === 2 ? '20' + tahun : tahun;
-    return `${yyyy}-${mm}-${pad(dd)}`;
-  }
-  return null;
-}
-
-function pad(n) {
-  return n.toString().padStart(2, '0');
 }
 
 bot.on("message", async (msg) => {
@@ -139,25 +108,11 @@ bot.on("photo", async (msg) => {
     console.error("❌ Gagal padam mesej:", e.message);
   }
 
-  const [result] = await visionClient.textDetection(fileUrl);
-  const ocrText = result.fullTextAnnotation ? result.fullTextAnnotation.text : '';
-
-  const tarikhCaption = cariTarikhDalamText(matched.detail);
-  const tarikhOCR = cariTarikhDalamText(ocrText);
-
-  if (matched.detail.toUpperCase().startsWith("RESIT PERBELANJAAN")) {
-    if (!tarikhCaption || !tarikhOCR || tarikhCaption !== tarikhOCR) {
-      await bot.sendMessage(chatId, `❌ Tarikh tidak sepadan.\n📅 Caption: ${tarikhCaption || '❓'}\n🧾 Resit: ${tarikhOCR || '❓'}`);
-      return;
-    }
-  }
-
   const lines = matched.detail.split('\n');
   const firstLine = lines[0] ? `<b>${lines[0]}</b>` : '';
   const otherLines = lines.slice(1).join('\n');
   const formattedCaption = `${firstLine}\n${otherLines}`;
 
-  // Hantar semula guna buffer dari axios (gambar + caption 1 post)
   const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' }).then(res => Buffer.from(res.data, 'binary'));
 
   await bot.sendPhoto(chatId, imageBuffer, {
@@ -167,4 +122,3 @@ bot.on("photo", async (msg) => {
 
   delete pendingUploads[replyToMsg.message_id];
 });
-
