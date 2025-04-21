@@ -233,11 +233,11 @@ try {
   } else {
     await bot.sendMessage(chatId, `❌ Tarikh tidak sepadan.\n📅 Caption: ${tarikhCaption || '❓'}\n🧾 Gambar: ${tarikhOCR || '❓'}`, {
       reply_markup: {
-        inline_keyboard: [
-          [{ text: "✅ Luluskan Secara Manual", callback_data: `manual_${replyToMsg.message_id}` }]
-        ]
-    });
-  }
+  inline_keyboard: [
+    [{ text: "✅ Luluskan Secara Manual", callback_data: `manual_${replyToMsg.message_id}` }]
+  ]
+}
+
 } catch (err) {
   console.error("❌ Error semak tarikh:", err.message);
 }
