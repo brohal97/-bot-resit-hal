@@ -110,11 +110,13 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
     return `❌ Nama bank tidak padan.`;
   }
 
-  // 3. Semak nombor akaun (asalkan wujud dalam OCR)
-  const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
-  if (!noAkaunCaption || !ocrLower.includes(noAkaunCaption)) {
-    return `❌ Nombor akaun tidak padan.`;
-  }
+  // 3. Semak nombor akaun (ambil dari caption, cari dalam OCR tanpa spacing)
+const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
+const ocrClean = ocrLower.replace(/\s+/g, '');
+
+if (!noAkaunCaption || !ocrClean.includes(noAkaunCaption)) {
+  return `❌ Nombor akaun tidak padan.`;
+}
 
   // 4. Semak jumlah (normalize & format)
   function normalizeJumlah(str) {
