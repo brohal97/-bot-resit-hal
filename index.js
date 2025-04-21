@@ -51,10 +51,6 @@ function pad(n) {
   return n.toString().padStart(2, '0');
 }
 
-function pad(n) {
-  return n.toString().padStart(2, '0');
-}
-
 // Bila terima mesej jenis rasmi
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
