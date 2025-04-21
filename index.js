@@ -5,14 +5,13 @@ const axios = require('axios');
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 const visionApiKey = process.env.VISION_API_KEY;
 
-console.log("🤖 BOT AKTIF – Sistem Padanan Tarikh Caption & Gambar");
+console.log("🤖 BOT AKTIF – Sistem Lengkap Padanan Resit");
 
 const bulanMap = {
   jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
   jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
 };
 
-// Format tarikh ke bentuk standard DD/MM/YYYY
 function detectAndFormatDateFromText(text) {
   text = text.toLowerCase().replace(/[\.\-]/g, ' ');
 
@@ -37,7 +36,6 @@ function detectAndFormatDateFromText(text) {
   return null;
 }
 
-// OCR Google Vision
 async function extractTarikhFromImage(fileUrl) {
   const endpoint = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
 
@@ -75,8 +73,8 @@ bot.on('message', async (msg) => {
   const messageId = msg.message_id;
   const text = msg.text;
 
-  // Skip jika bukan mesej teks biasa
-  if (!text || msg.photo || msg.document || msg.caption) return;
+  // Abaikan mesej yang bukan teks biasa
+  if (!text || msg.photo || msg.document || msg.caption || msg.reply_to_message) return;
 
   // Padam mesej asal
   await bot.deleteMessage(chatId, messageId).catch(err => {
@@ -84,7 +82,7 @@ bot.on('message', async (msg) => {
   });
 
   // Hantar semula dengan butang
-  await bot.sendMessage(chatId, `📩 *${text}*`, {
+  const sent = await bot.sendMessage(chatId, `📩 *${text}*`, {
     parse_mode: "Markdown",
     reply_markup: {
       inline_keyboard: [
@@ -94,7 +92,7 @@ bot.on('message', async (msg) => {
   });
 });
 
-// ========== [ FUNGSI 2: SIMPAN PAIRING BILA TEKAN BUTANG ] ==========
+// ========== [ FUNGSI 2: BILA TEKAN BUTANG – AKTIFKAN FORCE REPLY ] ==========
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const messageId = query.message.message_id;
@@ -102,62 +100,60 @@ bot.on('callback_query', async (query) => {
   const data = query.data;
 
   if (data.startsWith('upload_')) {
-    const originalMessageId = data.split('_')[1];
-
     pendingUploads[userId] = {
-      captionMsgId: messageId,
-      time: Date.now()
+      captionText: query.message.text || '',
+      forceReplyTo: messageId
     };
 
     await bot.answerCallbackQuery({ callback_query_id: query.id });
-    await bot.sendMessage(chatId, `📤 Sila upload gambar resit sekarang.`, {
+
+    await bot.sendMessage(chatId, `📤 Sila reply mesej ini dengan gambar resit anda.`, {
+      reply_markup: { force_reply: true },
       reply_to_message_id: messageId
     });
   }
 });
 
-// ========== [ FUNGSI 3: BILA GAMBAR DIMUAT NAIK ] ==========
+// ========== [ FUNGSI 3: USER REPLY DENGAN GAMBAR ] ==========
 bot.on('photo', async (msg) => {
   const userId = msg.from.id;
   const chatId = msg.chat.id;
   const messageId = msg.message_id;
-  const photos = msg.photo;
-  const fileId = photos[photos.length - 1].file_id;
+  const replyTo = msg.reply_to_message?.message_id || null;
 
-  if (!pendingUploads[userId]) {
-    return bot.sendMessage(chatId, `⚠️ Anda belum tekan butang "Upload Resit".`, {
+  if (!pendingUploads[userId] || !replyTo) {
+    return bot.sendMessage(chatId, `⚠️ Sila tekan butang "Upload Resit" dan reply dengan gambar.`, {
       reply_to_message_id: messageId
     });
   }
 
+  const { captionText, forceReplyTo } = pendingUploads[userId];
+
+  const photos = msg.photo;
+  const fileId = photos[photos.length - 1].file_id;
+
   const file = await bot.getFile(fileId);
   const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
-
-  const pairedMsgId = pendingUploads[userId].captionMsgId;
-  const captionMsg = await bot.getChatMessage?.(chatId, pairedMsgId).catch(() => null);
-  const captionText = captionMsg?.text || '';
 
   const tarikhOCR = await extractTarikhFromImage(fileUrl);
   const tarikhCaption = detectAndFormatDateFromText(captionText);
 
   if (!tarikhOCR || !tarikhCaption) {
-    return bot.sendMessage(chatId, `⚠️ Gagal kesan tarikh dalam gambar atau caption.`, {
+    await bot.sendMessage(chatId, `⚠️ Gagal kesan tarikh dalam gambar atau caption.`, {
       reply_to_message_id: messageId
     });
+    return delete pendingUploads[userId];
   }
 
-  if (tarikhOCR === tarikhCaption) {
-    await bot.sendMessage(chatId, `✅ Tarikh padan: *${tarikhOCR}*`, {
-      parse_mode: "Markdown",
-      reply_to_message_id: messageId
-    });
-  } else {
-    await bot.sendMessage(chatId, `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR}*\n✍️ Caption: *${tarikhCaption}*`, {
-      parse_mode: "Markdown",
-      reply_to_message_id: messageId
-    });
-  }
+  // Padam gambar dan mesej caption berasingan
+  await bot.deleteMessage(chatId, messageId).catch(() => {});
+  await bot.deleteMessage(chatId, forceReplyTo).catch(() => {});
+
+  // Hantar semula gambar + caption dalam satu post
+  await bot.sendPhoto(chatId, fileId, {
+    caption: `📩 ${captionText}`,
+    parse_mode: "Markdown"
+  });
 
   delete pendingUploads[userId];
 });
-
