@@ -5,7 +5,7 @@ const axios = require('axios');
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 const visionApiKey = process.env.VISION_API_KEY;
 
-console.log("🤖 BOT AKTIF – Kesan Tarikh dari Gambar");
+console.log("🤖 BOT AKTIF – Kesan Tarikh Gambar");
 
 const bulanMap = {
   jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
@@ -15,7 +15,8 @@ const bulanMap = {
 function detectAndFormatDateFromText(text) {
   text = text.toLowerCase().replace(/[\.\-]/g, ' ');
 
-  const regex = /\b(\d{1,2})\s*([a-zA-Z]{3})\s*(\d{2,4})\b/g;
+  // Format: 1 Jan 2025 atau 01Jan2025
+  const regex = /\b(\d{1,2})\s*([a-z]{3})\s*(\d{2,4})\b/g;
   let match;
   while ((match = regex.exec(text)) !== null) {
     let [_, day, monthStr, year] = match;
@@ -30,8 +31,8 @@ function detectAndFormatDateFromText(text) {
     return `${day}/${month}/${year}`;
   }
 
-  // fallback to format dd/mm/yyyy
-  const altRegex = /\b(0?[1-9]|[12][0-9]|3[01])[\/\-\.](0?[1-9]|1[0-2])[\/\-\.](\d{2,4})\b/;
+  // Format: 03/03/2025 atau 3-3-2025
+  const altRegex = /\b(0?[1-9]|[12][0-9]|3[01])[\s\/\-\.](0?[1-9]|1[0-2])[\s\/\-\.](\d{2,4})\b/;
   const altMatch = text.match(altRegex);
   if (altMatch) {
     let [_, day, month, year] = altMatch;
@@ -47,7 +48,7 @@ function detectAndFormatDateFromText(text) {
 }
 
 async function extractTarikhFromImage(imageUrl) {
-  const visionEndpoint = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
+  const endpoint = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
   const body = {
     requests: [{
       image: { source: { imageUri: imageUrl } },
@@ -55,11 +56,22 @@ async function extractTarikhFromImage(imageUrl) {
     }]
   };
 
-  const response = await axios.post(visionEndpoint, body);
-  const ocrText = response.data.responses[0]?.fullTextAnnotation?.text || "";
+  try {
+    const response = await axios.post(endpoint, body);
+    const ocrText = response.data.responses[0]?.fullTextAnnotation?.text || "";
+    
+    // Log to debug OCR
+    console.log("🧾 OCR OUTPUT:\n", ocrText);
 
-  const tarikh = detectAndFormatDateFromText(ocrText);
-  return tarikh;
+    // Gabungkan semua text ke satu baris untuk regex lebih stabil
+    const cleanText = ocrText.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+    const tarikh = detectAndFormatDateFromText(cleanText);
+    return tarikh;
+
+  } catch (err) {
+    console.error("❌ Error Vision API:", err.message);
+    return null;
+  }
 }
 
 bot.on('photo', async (msg) => {
@@ -70,16 +82,22 @@ bot.on('photo', async (msg) => {
   try {
     const file = await bot.getFile(fileId);
     const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
-
+    
     const tarikh = await extractTarikhFromImage(fileUrl);
 
     if (tarikh) {
-      bot.sendMessage(chatId, `📅 Tarikh dikesan dalam gambar: *${tarikh}*`, { parse_mode: "Markdown" });
+      await bot.sendMessage(chatId, `📅 Tarikh dikesan dalam gambar: *${tarikh}*`, {
+        parse_mode: "Markdown",
+        reply_to_message_id: msg.message_id
+      });
     } else {
-      bot.sendMessage(chatId, `⚠️ Tiada tarikh sah ditemui dalam gambar ini.`);
+      await bot.sendMessage(chatId, `⚠️ Tiada tarikh sah ditemui dalam gambar ini.`, {
+        reply_to_message_id: msg.message_id
+      });
     }
+
   } catch (error) {
-    console.error("❌ Error semasa proses gambar:", error.message);
+    console.error("❌ Error Proses Gambar:", error.message);
     bot.sendMessage(chatId, `❌ Gagal proses gambar. Sila cuba lagi.`);
   }
 });
