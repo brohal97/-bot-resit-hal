@@ -88,41 +88,58 @@ function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption
 
   return `✅ Resit disahkan: *${tarikhOCR}*`;
 }
-// =================== [ SEMAK BAYAR KOMISEN ] ===================
+// =================== [ SEMAK BAYAR KOMISEN – FINAL STABIL ] ===================
 function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
   const ocrLower = ocrText.toLowerCase();
   const captionLower = captionText.toLowerCase();
 
+  // 1. Semak tarikh
   if (tarikhOCR !== tarikhCaption) {
     return `❌ Tarikh tidak padan.`;
   }
 
   // 2. Semak nama bank (normalize spacing)
-const normalize = str => str.toLowerCase().replace(/\s+/g, '');
-
-const bankList = [
-  'maybank', 'cimb', 'bankislam', 'rhb',
-  'ambank', 'bsn', 'agrobank', 'bankmuamalat', 'muamalat'
-];
-
-const bankOCR = bankList.find(bank => normalize(ocrText).includes(bank));
-const bankCaption = bankList.find(bank => normalize(captionText).includes(bank));
-
-if (!bankOCR || !bankCaption) {
-  return `❌ Nama bank tidak padan.`;
-}
-  const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
-if (!noAkaunCaption || !ocrLower.includes(noAkaunCaption)) {
-  return `❌ Nombor akaun tidak padan.`;
-}
-  const jumlahOCR = ocrLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
-  const jumlahCaption = captionLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
-  if (!jumlahOCR || !jumlahCaption || jumlahOCR[0] !== jumlahCaption[0]) {
-    return `❌ Jumlah tidak padan.`;
+  const normalize = str => str.toLowerCase().replace(/\s+/g, '');
+  const bankList = [
+    'maybank', 'cimb', 'bankislam', 'rhb',
+    'ambank', 'bsn', 'agrobank', 'bankmuamalat', 'muamalat'
+  ];
+  const bankOCR = bankList.find(bank => normalize(ocrText).includes(bank));
+  const bankCaption = bankList.find(bank => normalize(captionText).includes(bank));
+  if (!bankOCR || !bankCaption) {
+    return `❌ Nama bank tidak padan.`;
   }
 
-  return `✅ Komisen disahkan: *${jumlahOCR[0].toUpperCase()}*`;
+  // 3. Semak nombor akaun (asalkan wujud dalam OCR)
+  const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
+  if (!noAkaunCaption || !ocrLower.includes(noAkaunCaption)) {
+    return `❌ Nombor akaun tidak padan.`;
+  }
+
+  // 4. Semak jumlah (normalize & format)
+  function normalizeJumlah(str) {
+    return parseFloat(
+      str.replace(/,/g, '').replace(/(rm|myr)/gi, '').trim()
+    ).toFixed(2);
+  }
+
+  const jumlahOCRraw = ocrLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+  const jumlahCaptionRaw = captionLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+
+  if (!jumlahOCRraw || !jumlahCaptionRaw) {
+    return `❌ Jumlah tidak dapat dipastikan.`;
+  }
+
+  const jumlahOCR = normalizeJumlah(jumlahOCRraw[0]);
+  const jumlahCaption = normalizeJumlah(jumlahCaptionRaw[0]);
+
+  if (jumlahOCR !== jumlahCaption) {
+    return `❌ Jumlah tidak padan.\n📸 Slip: *RM${jumlahOCR}*\n✍️ Caption: *RM${jumlahCaption}*`;
+  }
+
+  return `✅ Komisen disahkan: *RM${jumlahOCR}*`;
 }
+
 // =================== [ PAIRING STORAGE ] ===================
 let pendingUploads = {};
 
