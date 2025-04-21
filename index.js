@@ -148,8 +148,10 @@ bot.on("photo", async (msg) => {
   }
 
   // ✅ Dapatkan URL gambar dari Telegram
-  const file = await bot.getFile(msg.photo[msg.photo.length - 1].file_id);
-  const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+  const photo = msg.photo[msg.photo.length - 1]; // Ambil info gambar
+const file = await bot.getFile(photo.file_id); // Dapatkan info fail
+const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`; // URL terus
+
 
   // ✅ Run OCR dengan Google Vision
   const [result] = await visionClient.textDetection(fileUrl);
@@ -174,7 +176,7 @@ bot.on("photo", async (msg) => {
   const formattedCaption = `${firstLine}\n${otherLines}`;
 
   // ✅ Hantar semula gambar + caption dalam 1 post
-  await bot.sendPhoto(chatId, msg.photo[msg.photo.length - 1].file_id, {
+  await bot.sendPhoto(chatId, fileUrl, {
     caption: formattedCaption,
     parse_mode: "HTML"
   });
