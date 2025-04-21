@@ -111,13 +111,10 @@ const bankCaption = bankList.find(bank => normalize(captionText).includes(bank))
 if (!bankOCR || !bankCaption) {
   return `❌ Nama bank tidak padan.`;
 }
-
-  const noAkaunOCR = ocrLower.match(/\b\d{10,16}\b/);
-  const noAkaunCaption = captionLower.match(/\b\d{10,16}\b/);
-  if (!noAkaunOCR || !noAkaunCaption || noAkaunOCR[0] !== noAkaunCaption[0]) {
-    return `❌ Nombor akaun tidak padan.`;
-  }
-
+  const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
+if (!noAkaunCaption || !ocrLower.includes(noAkaunCaption)) {
+  return `❌ Nombor akaun tidak padan.`;
+}
   const jumlahOCR = ocrLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
   const jumlahCaption = captionLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
   if (!jumlahOCR || !jumlahCaption || jumlahOCR[0] !== jumlahCaption[0]) {
