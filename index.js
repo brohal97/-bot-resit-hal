@@ -88,7 +88,7 @@ function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption
 
   return `✅ Resit disahkan: *${tarikhOCR}*`;
 }
-// =================== [ SEMAK BAYAR KOMISEN – VERSI AKHIR & STABIL ] ===================
+// =================== [ SEMAK BAYAR KOMISEN – VERSI FINAL DENGAN RM/MYR SAHAJA ] ===================
 function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
   const ocrLower = ocrText.toLowerCase();
   const captionLower = captionText.toLowerCase();
@@ -117,18 +117,18 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
     return `❌ Nombor akaun tidak padan.`;
   }
 
-  // 4. Semak jumlah (normalize dan padankan dari baris TOTAL sahaja dalam caption)
+  // 4. Semak jumlah (OCR mesti ada RM/MYR sahaja)
   function normalizeJumlah(str) {
     return parseFloat(
       str.replace(/,/g, '').replace(/(rm|myr)/gi, '').trim()
     ).toFixed(2);
   }
 
-  const jumlahOCRraw = ocrLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
-
   const captionLines = captionLower.split('\n');
   const totalLine = captionLines.find(line => /total/.test(line) && /(rm|myr)/.test(line));
-  const jumlahCaptionRaw = totalLine?.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+  const jumlahCaptionRaw = totalLine?.match(/(rm|myr)\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+
+  const jumlahOCRraw = ocrLower.match(/(rm|myr)\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
 
   if (!jumlahOCRraw || !jumlahCaptionRaw) {
     return `❌ Jumlah tidak dapat dipastikan.`;
