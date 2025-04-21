@@ -3,13 +3,12 @@ const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
-let pendingUploads = {}; // Simpan pairing ikut message_id
+let pendingUploads = {};
 
 console.log("🤖 BOT AKTIF – RESIT PERBELANJAAN | BAYAR KOMISEN | BAYAR TRANSPORT");
 
-// Fungsi khas aktifkan reply UI (trick)
 async function replyUITrick(chatId, text, replyTo) {
-  const sent = await bot.sendMessage(chatId, '❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐫𝐚❗️', {
+  const sent = await bot.sendMessage(chatId, `❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐫𝐚❗️`, {
     reply_to_message_id: replyTo,
     parse_mode: "HTML",
     reply_markup: {
@@ -19,10 +18,8 @@ async function replyUITrick(chatId, text, replyTo) {
   return sent.message_id;
 }
 
-// Bila terima mesej jenis rasmi
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
-
   if (typeof msg.text !== "string") return;
 
   const text = msg.text.trim();
@@ -43,40 +40,34 @@ bot.on("message", async (msg) => {
     console.error("❌ Gagal padam mesej asal:", e.message);
   }
 
-  // Hantar semula dengan butang sahaja (tiada force_reply lagi)
-  // Pisahkan baris pertama dan baris selebihnya
-const lines = text.split('\n');
-const firstLine = lines[0] ? <b>${lines[0]}</b> : '';
-const otherLines = lines.slice(1).join('\n');
-const formattedText = ${firstLine}\n${otherLines};
+  const lines = text.split('\n');
+  const firstLine = lines[0] ? `<b>${lines[0]}</b>` : '';
+  const otherLines = lines.slice(1).join('\n');
+  const formattedText = `${firstLine}\n${otherLines}`;
 
-// Hantar semula mesej dengan butang + bold baris pertama
-const sent = await bot.sendMessage(chatId, formattedText, {
-  parse_mode: "HTML",
-  reply_markup: {
-    inline_keyboard: [
-      [{ text: "📸 Upload Resit", callback_data: upload_${originalMsgId} }]
-    ]
-  }
-});
+  const sent = await bot.sendMessage(chatId, formattedText, {
+    parse_mode: "HTML",
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📸 Upload Resit", callback_data: `upload_${originalMsgId}` }]
+      ]
+    }
+  });
 
   pendingUploads[sent.message_id] = {
-  detail: text,
-  chatId: chatId,
-  replyTo: sent.message_id,
-  captionMsgId: sent.message_id // 🆕 baris tambahan ini simpan ID caption asal
-};
+    detail: text,
+    chatId: chatId,
+    replyTo: sent.message_id,
+    captionMsgId: sent.message_id
+  };
 });
 
-// Bila user tekan butang "Upload Resit"
 bot.on("callback_query", async (callbackQuery) => {
   const msg = callbackQuery.message;
   const data = callbackQuery.data;
-
   if (!data.startsWith("upload_")) return;
 
   const uploadInfo = pendingUploads[msg.message_id];
-
   if (!uploadInfo) {
     await bot.answerCallbackQuery(callbackQuery.id, {
       text: "❌ Resit tidak dijumpai atau telah tamat.",
@@ -85,51 +76,49 @@ bot.on("callback_query", async (callbackQuery) => {
     return;
   }
 
-  // Aktifkan trick reply UI bila user tekan butang
   const replyMsgId = await replyUITrick(uploadInfo.chatId, uploadInfo.detail, uploadInfo.replyTo);
+  pendingUploads[replyMsgId] = {
+    detail: uploadInfo.detail,
+    chatId: uploadInfo.chatId,
+    replyTo: replyMsgId,
+    captionMsgId: msg.message_id
+  };
 
-pendingUploads[replyMsgId] = {
-  detail: uploadInfo.detail,       // Teks caption asal
-  chatId: uploadInfo.chatId,       // ID group
-  replyTo: replyMsgId,             // ID mesej force_reply
-  captionMsgId: msg.message_id     // 🆕 ID mesej caption asal (yang ada butang)
-};
-
-await bot.answerCallbackQuery(callbackQuery.id);
-
+  await bot.answerCallbackQuery(callbackQuery.id);
 });
+
 bot.on("photo", async (msg) => {
   const chatId = msg.chat.id;
   const replyToMsg = msg.reply_to_message;
-
   if (!replyToMsg) return;
 
   const matched = pendingUploads[replyToMsg.message_id];
   if (!matched) return;
 
+  const photo = msg.photo[msg.photo.length - 1];
+  const file = await bot.getFile(photo.file_id);
+  const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+  console.log("📎 fileUrl:", fileUrl);
+
   try {
-  await bot.deleteMessage(chatId, msg.message_id); // ❌ Gambar yang dihantar user
-  await bot.deleteMessage(chatId, replyToMsg.message_id); // ❌ Force reply "Sila hantar resit"
-  await bot.deleteMessage(chatId, matched.captionMsgId); // ❌ Caption asal yang ada butang
-} catch (e) {
-  console.error("❌ Gagal padam mesej:", e.message);
-}
+    await bot.deleteMessage(chatId, msg.message_id);
+    await bot.deleteMessage(chatId, replyToMsg.message_id);
+    await bot.deleteMessage(chatId, matched.captionMsgId);
+  } catch (e) {
+    console.error("❌ Gagal padam mesej:", e.message);
+  }
 
-  // Ambil file_id gambar resolusi tertinggi
-  const fileId = msg.photo[msg.photo.length - 1].file_id;
-
-  // Format semula caption dengan baris pertama bold
   const lines = matched.detail.split('\n');
-  const firstLine = lines[0] ? <b>${lines[0]}</b> : '';
+  const firstLine = lines[0] ? `<b>${lines[0]}</b>` : '';
   const otherLines = lines.slice(1).join('\n');
-  const formattedCaption = ${firstLine}\n${otherLines};
+  const formattedCaption = `${firstLine}\n${otherLines}`;
 
-  // Hantar semula dalam 1 post (gambar + caption)
-  await bot.sendPhoto(chatId, fileId, {
+  const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' }).then(res => Buffer.from(res.data, 'binary'));
+
+  await bot.sendPhoto(chatId, imageBuffer, {
     caption: formattedCaption,
     parse_mode: "HTML"
   });
 
-  // Optional: buang dari pendingUploads
   delete pendingUploads[replyToMsg.message_id];
 });
