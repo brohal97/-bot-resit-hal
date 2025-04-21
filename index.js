@@ -7,7 +7,7 @@ const visionApiKey = process.env.VISION_API_KEY;
 
 console.log("🤖 BOT AKTIF – Sistem Lengkap Padanan Resit");
 
-// =================== [ Helper: Tarikh Normalizer – Sokongan English + BM ] ===================
+// =================== [ Helper: Tarikh Normalizer – Sokongan English + BM + Format "Jan 1 2025" ] ===================
 const bulanMap = {
   jan: '01', january: '01',
   feb: '02', februari: '02',
@@ -26,7 +26,8 @@ const bulanMap = {
 function detectAndFormatDateFromText(text) {
   text = text.toLowerCase().replace(/[\.\-]/g, ' ');
 
-  const regex = /\b(\d{1,2})\s*([a-z]{3})\s*(\d{2,4})\b/g;
+  // Format: 10 Jan 2025 / 10Jan2025
+  const regex = /\b(\d{1,2})\s*([a-z]{3,9})\s*(\d{2,4})\b/g;
   let match;
   while ((match = regex.exec(text)) !== null) {
     let [_, day, monthStr, year] = match;
@@ -36,6 +37,29 @@ function detectAndFormatDateFromText(text) {
     return `${day.padStart(2, '0')}/${month}/${year}`;
   }
 
+  // Format tanpa space: 10Jan2025
+  const noSpaceRegex = /(\d{1,2})([a-z]{3,9})(\d{2,4})/i;
+  const noSpaceMatch = text.match(noSpaceRegex);
+  if (noSpaceMatch) {
+    let [_, day, monthStr, year] = noSpaceMatch;
+    const month = bulanMap[monthStr.toLowerCase()];
+    if (!month) return null;
+    if (year.length === 2) year = year > 30 ? `19${year}` : `20${year}`;
+    return `${day.padStart(2, '0')}/${month}/${year}`;
+  }
+
+  // Format: Jan 1 2025 (bulan dulu)
+  const monthFirstRegex = /([a-z]{3,9})\s+(\d{1,2})\s+(\d{2,4})/i;
+  const monthFirstMatch = text.match(monthFirstRegex);
+  if (monthFirstMatch) {
+    let [_, monthStr, day, year] = monthFirstMatch;
+    const month = bulanMap[monthStr.toLowerCase()];
+    if (!month) return null;
+    if (year.length === 2) year = year > 30 ? `19${year}` : `20${year}`;
+    return `${day.padStart(2, '0')}/${month}/${year}`;
+  }
+
+  // Format: 10/01/2025 atau 10-01-25
   const altRegex = /\b(0?[1-9]|[12][0-9]|3[01])[\s\/\-\.](0?[1-9]|1[0-2])[\s\/\-\.](\d{2,4})\b/;
   const altMatch = text.match(altRegex);
   if (altMatch) {
