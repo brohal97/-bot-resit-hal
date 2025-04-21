@@ -1,8 +1,8 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
-const vision = require('@google-cloud/vision');
-const visionClient = new vision.ImageAnnotatorClient({ keyFilename: './key.json' });
+
+const API_KEY = process.env.VISION_API_KEY;
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 let pendingUploads = {};
@@ -127,9 +127,17 @@ bot.on("photo", async (msg) => {
   }
 
   if (matched.detail.toUpperCase().startsWith("RESIT PERBELANJAAN")) {
-    const [ocrResult] = await visionClient.textDetection(fileUrl);
-    const ocrText = ocrResult.fullTextAnnotation ? ocrResult.fullTextAnnotation.text : '';
+    const visionResponse = await axios.post(
+      `https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}`,
+      {
+        requests: [{
+          image: { source: { imageUri: fileUrl } },
+          features: [{ type: 'TEXT_DETECTION' }]
+        }]
+      }
+    );
 
+    const ocrText = visionResponse.data.responses[0].fullTextAnnotation?.text || '';
     const tarikhCaption = cariTarikhDalamText(matched.detail);
     const tarikhOCR = cariTarikhDalamText(ocrText);
 
