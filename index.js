@@ -129,6 +129,7 @@ bot.on("photo", async (msg) => {
   const photo = msg.photo[msg.photo.length - 1];
   const file = await bot.getFile(photo.file_id);
   const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+  console.log("📎 fileUrl:", fileUrl);
 
   try {
     await bot.deleteMessage(chatId, msg.message_id);
@@ -156,10 +157,14 @@ bot.on("photo", async (msg) => {
   const otherLines = lines.slice(1).join('\n');
   const formattedCaption = `${firstLine}\n${otherLines}`;
 
-  await bot.sendPhoto(chatId, fileUrl, {
+  // Hantar semula guna buffer dari axios (gambar + caption 1 post)
+  const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' }).then(res => Buffer.from(res.data, 'binary'));
+
+  await bot.sendPhoto(chatId, imageBuffer, {
     caption: formattedCaption,
     parse_mode: "HTML"
   });
 
   delete pendingUploads[replyToMsg.message_id];
 });
+
