@@ -106,10 +106,14 @@ const bankList = [
   'ambank', 'bsn', 'agrobank', 'bank muamalat', 'muamalat'
 ];
 
+// Ambil bank dari caption dulu
 const bankFromCaption = bankList.find(bank => captionLower.includes(bank));
+
+// Semak: adakah nama tu wujud dalam OCR?
 if (!bankFromCaption || !ocrLower.includes(bankFromCaption)) {
   return `❌ Nama bank tidak padan.`;
 }
+
   // 3. Semak nombor akaun (berpandukan caption, cari dalam OCR tanpa spacing)
   const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
   const ocrClean = ocrLower.replace(/\s+/g, '');
