@@ -114,12 +114,17 @@ if (!bankFromCaption || !ocrLower.includes(bankFromCaption)) {
   return `❌ Nama bank tidak padan.`;
 }
 
-  // 3. Semak nombor akaun (berpandukan caption, cari dalam OCR tanpa spacing)
-  const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
-  const ocrClean = ocrLower.replace(/\s+/g, '');
-  if (!noAkaunCaption || !ocrClean.includes(noAkaunCaption)) {
-    return `❌ Nombor akaun tidak padan.`;
-  }
+// 3. Semak nombor akaun (ketat - angka & susunan wajib sama, spacing boleh diabaikan)
+const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
+
+const noAkaunList = (ocrText.match(/\d[\d\s]{5,30}\d/g) || [])
+  .map(n => n.replace(/\s+/g, '')); // buang semua spacing
+
+const padanAkaun = noAkaunList.includes(noAkaunCaption);
+
+if (!noAkaunCaption || !padanAkaun) {
+  return `❌ Nombor akaun tidak padan.`;
+}
 
   // 4. Semak jumlah (OCR mesti ada RM/MYR sahaja)
   function normalizeJumlah(str) {
