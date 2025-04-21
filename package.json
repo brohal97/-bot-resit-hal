@@ -9,6 +9,6 @@
     "dotenv": "^16.0.0",
     "node-telegram-bot-api": "^0.61.0",
     "axios": "^1.6.0",
-    "@google-cloud/vision": "^3.3.0"
+    "@google-cloud/vision": "^2.4.0"
   }
 }
