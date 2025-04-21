@@ -116,52 +116,49 @@ bot.on("photo", async (msg) => {
   const otherLines = lines.slice(1).join('\n');
   const formattedCaption = `${firstLine}\n${otherLines}`;
 
-  const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' }).then(res => Buffer.from(res.data, 'binary'));
-
   try {
+    await bot.sendChatAction(chatId, 'upload_photo');
+
+    const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' }).then(res => Buffer.from(res.data, 'binary'));
+
     await bot.deleteMessage(chatId, msg.message_id);
     await bot.deleteMessage(chatId, replyToMsg.message_id);
     await bot.deleteMessage(chatId, matched.captionMsgId);
-  } catch (e) {
-    console.error("❌ Gagal padam mesej:", e.message);
-  }
 
-  if (matched.detail.toUpperCase().startsWith("RESIT PERBELANJAAN")) {
-    const visionResponse = await axios.post(
-      `https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}`,
-      {
-        requests: [{
-          image: { source: { imageUri: fileUrl } },
-          features: [{ type: 'TEXT_DETECTION' }]
-        }]
-      }
-    );
-
-    const ocrText = visionResponse.data.responses[0].fullTextAnnotation?.text || '';
-    const tarikhCaption = cariTarikhDalamText(matched.detail);
-    const tarikhOCR = cariTarikhDalamText(ocrText);
-
-    if (tarikhCaption && tarikhOCR && tarikhCaption === tarikhOCR) {
-      await bot.sendPhoto(process.env.CHANNEL_ID, imageBuffer, {
-        caption: formattedCaption,
-        parse_mode: "HTML"
-      });
-    } else {
-      await bot.sendMessage(chatId, `❌ Tarikh tidak sepadan.\n📅 Caption: ${tarikhCaption || '❓'}\n🧾 Gambar: ${tarikhOCR || '❓'}`, {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "✅ Luluskan Secara Manual", callback_data: `manual_${replyToMsg.message_id}` }]
-          ]
+    if (matched.detail.toUpperCase().startsWith("RESIT PERBELANJAAN")) {
+      const visionResponse = await axios.post(
+        `https://vision.googleapis.com/v1/images:annotate?key=${API_KEY}`,
+        {
+          requests: [{
+            image: { source: { imageUri: fileUrl } },
+            features: [{ type: 'TEXT_DETECTION' }]
+          }]
         }
-      });
-      return;
+      );
+
+      const ocrText = visionResponse.data.responses[0].fullTextAnnotation?.text || '';
+      const tarikhCaption = cariTarikhDalamText(matched.detail);
+      const tarikhOCR = cariTarikhDalamText(ocrText);
+
+      if (!tarikhCaption || !tarikhOCR || tarikhCaption !== tarikhOCR) {
+        await bot.sendMessage(chatId, `❌ Tarikh tidak sepadan.\n📅 Caption: ${tarikhCaption || '❓'}\n🧾 Gambar: ${tarikhOCR || '❓'}`, {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "✅ Luluskan Secara Manual", callback_data: `manual_${replyToMsg.message_id}` }]
+            ]
+          }
+        });
+        return;
+      }
     }
+
+    await bot.sendPhoto(chatId, imageBuffer, {
+      caption: formattedCaption,
+      parse_mode: "HTML"
+    });
+
+    delete pendingUploads[replyToMsg.message_id];
+  } catch (e) {
+    console.error("❌ Error hantar semula gambar:", e.message);
   }
-
-  await bot.sendPhoto(chatId, imageBuffer, {
-    caption: formattedCaption,
-    parse_mode: "HTML"
-  });
-
-  delete pendingUploads[replyToMsg.message_id];
 });
