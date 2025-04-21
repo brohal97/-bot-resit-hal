@@ -70,25 +70,6 @@ function formatTarikhStandard(text) {
 
   return text;
 }
-function extractTarikhFromOCRAndCaption(ocrText, captionText) {
-  const cleanLine = (line) => line
-    .replace(/(today|printed on|issued date|tarikh cetakan|tarikh transaksi|transaction date|tarikh)/gi, '')
-    .trim();
-
-  const ocrTarikh = ocrText
-    .split(/\n|\|/)
-    .map(line => cleanLine(line))
-    .filter(isTarikhValid)
-    .map(formatTarikhStandard)[0] || '';
-
-  const captionTarikh = captionText
-    .split(/\n|\|/)
-    .map(line => cleanLine(line))
-    .filter(isTarikhValid)
-    .map(formatTarikhStandard)[0] || '';
-
-  return { tarikhOCR: ocrTarikh, tarikhCaption: captionTarikh };
-}
 
 function cariTarikhDalamText(teks) {
   return formatTarikhStandard(teks);
@@ -222,28 +203,32 @@ const ocrLine = ocrText
   .find(line => isTarikhValid(line)) || '';
 
 // Format ke bentuk standard (dd-mm-yyyy)
-try {
-  const { tarikhOCR, tarikhCaption } = extractTarikhFromOCRAndCaption(ocrText, matched.detail);
+const { tarikhOCR, tarikhCaption } = extractTarikhFromOCRAndCaption(ocrText, matched.detail);
 
-  console.log("📅 Caption Tarikh:", tarikhCaption);
-  console.log("🧾 OCR Tarikh:", tarikhOCR);
+console.log("📅 Caption Tarikh:", tarikhCaption);
+console.log("🧾 OCR Tarikh:", tarikhOCR);
 
-  if (tarikhCaption && tarikhOCR && tarikhCaption === tarikhOCR) {
-    await bot.sendMessage(chatId, `✅ Tarikh padan: ${tarikhCaption}`);
-  } else {
-    await bot.sendMessage(chatId, `❌ Tarikh tidak sepadan.\n📅 Caption: ${tarikhCaption || '❓'}\n🧾 Gambar: ${tarikhOCR || '❓'}`, {
-      reply_markup: {
-  inline_keyboard: [
-    [{ text: "✅ Luluskan Secara Manual", callback_data: `manual_${replyToMsg.message_id}` }]
-  ]
-}
+// Debug log untuk semak dalam Railway log
+console.log("📅 CaptionLine:", captionLine);
+console.log("🧾 OCR Line:", ocrLine);
+console.log("✅ Tarikh Caption:", tarikhCaption);
+console.log("✅ Tarikh OCR:", tarikhOCR);
 
-} catch (err) {
-  console.error("❌ Error semak tarikh:", err.message);
-}
+      if (tarikhCaption && tarikhOCR && tarikhCaption === tarikhOCR) {
+        await bot.sendMessage(chatId, `✅ Tarikh padan: ${tarikhCaption}`);
+      } else {
+        await bot.sendMessage(chatId, `❌ Tarikh tidak sepadan.\n📅 Caption: ${tarikhCaption || '❓'}\n🧾 Gambar: ${tarikhOCR || '❓'}`, {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "✅ Luluskan Secara Manual", callback_data: `manual_${replyToMsg.message_id}` }]
+            ]
+          }
+        });
+      }
+    }
+
     delete pendingUploads[replyToMsg.message_id];
   } catch (e) {
     console.error("❌ Error hantar semula gambar:", e.message);
   }
 });
-
