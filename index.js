@@ -88,7 +88,7 @@ function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption
 
   return `✅ Resit disahkan: *${tarikhOCR}*`;
 }
-// =================== [ SEMAK BAYAR KOMISEN – VERSI KHAS ] ===================
+// =================== [ SEMAK BAYAR KOMISEN – VERSI AKHIR & STABIL ] ===================
 function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
   const ocrLower = ocrText.toLowerCase();
   const captionLower = captionText.toLowerCase();
@@ -98,7 +98,7 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
     return `❌ Tarikh tidak padan.`;
   }
 
-  // 2. Semak nama bank (normalize spacing dan huruf besar)
+  // 2. Semak nama bank (normalize spacing)
   const normalize = str => str.toLowerCase().replace(/\s+/g, '');
   const bankList = [
     'maybank', 'cimb', 'bankislam', 'rhb',
@@ -110,14 +110,14 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
     return `❌ Nama bank tidak padan.`;
   }
 
-  // 3. Semak nombor akaun (ambil dari caption, cari dalam OCR tanpa spacing)
+  // 3. Semak nombor akaun (berpandukan caption, cari dalam OCR tanpa spacing)
   const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
   const ocrClean = ocrLower.replace(/\s+/g, '');
   if (!noAkaunCaption || !ocrClean.includes(noAkaunCaption)) {
     return `❌ Nombor akaun tidak padan.`;
   }
 
-  // 4. Semak jumlah (normalize dan padankan nilai sahaja)
+  // 4. Semak jumlah (normalize dan nilai padanan sahaja)
   function normalizeJumlah(str) {
     return parseFloat(
       str.replace(/,/g, '').replace(/(rm|myr)/gi, '').trim()
@@ -138,7 +138,7 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
     return `❌ Jumlah tidak padan.\n📸 Slip: *RM${jumlahOCR}*\n✍️ Caption: *RM${jumlahCaption}*`;
   }
 
-  return `✅ Komisen disahkan: *RM${jumlahOCR}*`;
+  return `✅ BAYAR KOMISEN LULUS\nTarikh: ${tarikhCaption}`;
 }
 
 // =================== [ PAIRING STORAGE ] ===================
