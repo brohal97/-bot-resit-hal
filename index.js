@@ -190,18 +190,6 @@ bot.on("photo", async (msg) => {
       const response = visionResponse.data.responses[0];
       const ocrText = response.fullTextAnnotation?.text || response.textAnnotations?.[0]?.description || '';
 
-      // Pisahkan caption ikut baris atau simbol | dan cari yang valid
-const captionLine = matched.detail
-  .split(/\n|\|/)
-  .map(line => line.trim())
-  .find(line => isTarikhValid(line)) || '';
-
-// Pisahkan OCR text ikut baris atau simbol | dan cari yang valid
-const ocrLine = ocrText
-  .split(/\n|\|/)
-  .map(line => line.trim())
-  .find(line => isTarikhValid(line)) || '';
-
 // Format ke bentuk standard (dd-mm-yyyy)
 const { tarikhOCR, tarikhCaption } = extractTarikhFromOCRAndCaption(ocrText, matched.detail);
 
