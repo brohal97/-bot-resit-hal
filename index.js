@@ -111,6 +111,13 @@ bot.on("photo", async (msg) => {
   const file = await bot.getFile(photo.file_id);
   const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
 
+  const lines = matched.detail.split('\n');
+  const firstLine = lines[0] ? `<b>${lines[0]}</b>` : '';
+  const otherLines = lines.slice(1).join('\n');
+  const formattedCaption = `${firstLine}\n${otherLines}`;
+
+  const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' }).then(res => Buffer.from(res.data, 'binary'));
+
   try {
     await bot.deleteMessage(chatId, msg.message_id);
     await bot.deleteMessage(chatId, replyToMsg.message_id);
@@ -119,12 +126,6 @@ bot.on("photo", async (msg) => {
     console.error("❌ Gagal padam mesej:", e.message);
   }
 
-  const lines = matched.detail.split('\n');
-  const firstLine = lines[0] ? `<b>${lines[0]}</b>` : '';
-  const otherLines = lines.slice(1).join('\n');
-  const formattedCaption = `${firstLine}\n${otherLines}`;
-
-  // OCR: Semak tarikh jika RESIT PERBELANJAAN
   if (matched.detail.toUpperCase().startsWith("RESIT PERBELANJAAN")) {
     const [ocrResult] = await visionClient.textDetection(fileUrl);
     const ocrText = ocrResult.fullTextAnnotation ? ocrResult.fullTextAnnotation.text : '';
@@ -133,13 +134,11 @@ bot.on("photo", async (msg) => {
     const tarikhOCR = cariTarikhDalamText(ocrText);
 
     if (tarikhCaption && tarikhOCR && tarikhCaption === tarikhOCR) {
-      // Tarikh padan, forward ke channel
-      await bot.sendPhoto(process.env.CHANNEL_ID, fileUrl, {
+      await bot.sendPhoto(process.env.CHANNEL_ID, imageBuffer, {
         caption: formattedCaption,
         parse_mode: "HTML"
       });
     } else {
-      // Tarikh tak sama, hantar mesej dengan butang LULUS MANUAL
       await bot.sendMessage(chatId, `❌ Tarikh tidak sepadan.\n📅 Caption: ${tarikhCaption || '❓'}\n🧾 Gambar: ${tarikhOCR || '❓'}`, {
         reply_markup: {
           inline_keyboard: [
@@ -150,9 +149,6 @@ bot.on("photo", async (msg) => {
       return;
     }
   }
-
-  // Hantar semula ke group (tetap buat walau bukan RESIT PERBELANJAAN)
-  const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' }).then(res => Buffer.from(res.data, 'binary'));
 
   await bot.sendPhoto(chatId, imageBuffer, {
     caption: formattedCaption,
