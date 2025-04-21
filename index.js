@@ -236,7 +236,6 @@ try {
         inline_keyboard: [
           [{ text: "✅ Luluskan Secara Manual", callback_data: `manual_${replyToMsg.message_id}` }]
         ]
-      ]
     });
   }
 } catch (err) {
