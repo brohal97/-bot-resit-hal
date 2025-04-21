@@ -7,10 +7,20 @@ const visionApiKey = process.env.VISION_API_KEY;
 
 console.log("🤖 BOT AKTIF – Sistem Lengkap Padanan Resit");
 
-// =================== [ Helper: Tarikh Normalizer ] ===================
+// =================== [ Helper: Tarikh Normalizer – Sokongan English + BM ] ===================
 const bulanMap = {
-  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
-  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
+  jan: '01', january: '01',
+  feb: '02', februari: '02',
+  mar: '03', mac: '03',
+  apr: '04', april: '04',
+  may: '05', mei: '05',
+  jun: '06',
+  jul: '07',
+  aug: '08', ogos: '08',
+  sep: '09', september: '09',
+  oct: '10', oktober: '10',
+  nov: '11', november: '11',
+  dec: '12', dis: '12', disember: '12'
 };
 
 function detectAndFormatDateFromText(text) {
