@@ -1,6 +1,8 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
+const vision = require('@google-cloud/vision');
+const visionClient = new vision.ImageAnnotatorClient({ keyFilename: './key.json' });
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 let pendingUploads = {};
@@ -16,6 +18,16 @@ async function replyUITrick(chatId, text, replyTo) {
     }
   });
   return sent.message_id;
+}
+
+function cariTarikhDalamText(teks) {
+  const pattern1 = /\b(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{2,4})\b/;
+  const match1 = teks.match(pattern1);
+  if (match1) {
+    const [_, dd, mm, yyyy] = match1;
+    return `${yyyy.length === 2 ? '20' + yyyy : yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+  }
+  return null;
 }
 
 bot.on("message", async (msg) => {
@@ -98,7 +110,6 @@ bot.on("photo", async (msg) => {
   const photo = msg.photo[msg.photo.length - 1];
   const file = await bot.getFile(photo.file_id);
   const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
-  console.log("📎 fileUrl:", fileUrl);
 
   try {
     await bot.deleteMessage(chatId, msg.message_id);
@@ -113,6 +124,34 @@ bot.on("photo", async (msg) => {
   const otherLines = lines.slice(1).join('\n');
   const formattedCaption = `${firstLine}\n${otherLines}`;
 
+  // OCR: Semak tarikh jika RESIT PERBELANJAAN
+  if (matched.detail.toUpperCase().startsWith("RESIT PERBELANJAAN")) {
+    const [ocrResult] = await visionClient.textDetection(fileUrl);
+    const ocrText = ocrResult.fullTextAnnotation ? ocrResult.fullTextAnnotation.text : '';
+
+    const tarikhCaption = cariTarikhDalamText(matched.detail);
+    const tarikhOCR = cariTarikhDalamText(ocrText);
+
+    if (tarikhCaption && tarikhOCR && tarikhCaption === tarikhOCR) {
+      // Tarikh padan, forward ke channel
+      await bot.sendPhoto(process.env.CHANNEL_ID, fileUrl, {
+        caption: formattedCaption,
+        parse_mode: "HTML"
+      });
+    } else {
+      // Tarikh tak sama, hantar mesej dengan butang LULUS MANUAL
+      await bot.sendMessage(chatId, `❌ Tarikh tidak sepadan.\n📅 Caption: ${tarikhCaption || '❓'}\n🧾 Gambar: ${tarikhOCR || '❓'}`, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "✅ Luluskan Secara Manual", callback_data: `manual_${replyToMsg.message_id}` }]
+          ]
+        }
+      });
+      return;
+    }
+  }
+
+  // Hantar semula ke group (tetap buat walau bukan RESIT PERBELANJAAN)
   const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' }).then(res => Buffer.from(res.data, 'binary'));
 
   await bot.sendPhoto(chatId, imageBuffer, {
