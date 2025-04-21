@@ -120,3 +120,54 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
   return `✅ Komisen disahkan: *${jumlahOCR[0].toUpperCase()}*`;
 }
 
+// =================== [ PAIRING STORAGE ] ===================
+let pendingUploads = {};
+
+// =================== [ FUNGSI 3: Reply Gambar ➜ OCR + Gabung + Semakan + Padam ] ===================
+bot.on('photo', async (msg) => {
+  const userId = msg.from.id;
+  const chatId = msg.chat.id;
+  const messageId = msg.message_id;
+  const replyTo = msg.reply_to_message?.message_id || null;
+
+  if (!pendingUploads[userId] || !replyTo) {
+    return bot.sendMessage(chatId, `⚠️ Sila tekan butang "Upload Resit" dan reply dengan gambar.`, {
+      reply_to_message_id: messageId
+    });
+  }
+
+  const { captionText, forceReplyTo, promptMsgId } = pendingUploads[userId];
+  const photos = msg.photo;
+  const fileId = photos[photos.length - 1].file_id;
+
+  const file = await bot.getFile(fileId);
+  const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
+
+  const { tarikh, ocrText } = await extractTarikhFromImage(fileUrl);
+  const tarikhCaption = detectAndFormatDateFromText(captionText);
+
+  let semakan = '';
+  const jenis = captionText.split('\n')[0].trim().toUpperCase();
+
+  if (jenis.includes("RESIT PERBELANJAAN")) {
+    semakan = semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR: tarikh, tarikhCaption });
+  } else if (jenis.includes("BAYAR KOMISEN")) {
+    semakan = semakBayarKomisen({ ocrText, captionText, tarikhOCR: tarikh, tarikhCaption });
+  } else {
+    semakan = `⚠️ Jenis resit tidak dikenali.`;
+  }
+
+  const lines = captionText.split('\n');
+  const formattedCaption = `*${lines[0]}*\n` + lines.slice(1).join('\n');
+
+  await bot.deleteMessage(chatId, messageId).catch(() => {});
+  await bot.deleteMessage(chatId, forceReplyTo).catch(() => {});
+  await bot.deleteMessage(chatId, promptMsgId).catch(() => {});
+
+  await bot.sendPhoto(chatId, fileId, {
+    caption: `${formattedCaption}\n\n${semakan}`,
+    parse_mode: "Markdown"
+  });
+
+  delete pendingUploads[userId];
+});
