@@ -190,8 +190,27 @@ bot.on("photo", async (msg) => {
       const response = visionResponse.data.responses[0];
       const ocrText = response.fullTextAnnotation?.text || response.textAnnotations?.[0]?.description || '';
 
-      const tarikhCaption = cariTarikhDalamText(matched.detail);
-      const tarikhOCR = cariTarikhDalamText(ocrText);
+      // Pisahkan caption ikut baris atau simbol | dan cari yang valid
+const captionLine = matched.detail
+  .split(/\n|\|/)
+  .map(line => line.trim())
+  .find(line => isTarikhValid(line)) || '';
+
+// Pisahkan OCR text ikut baris atau simbol | dan cari yang valid
+const ocrLine = ocrText
+  .split(/\n|\|/)
+  .map(line => line.trim())
+  .find(line => isTarikhValid(line)) || '';
+
+// Format ke bentuk standard (dd-mm-yyyy)
+const tarikhCaption = cariTarikhDalamText(captionLine);
+const tarikhOCR = cariTarikhDalamText(ocrLine);
+
+// Debug log untuk semak dalam Railway log
+console.log("📅 CaptionLine:", captionLine);
+console.log("🧾 OCR Line:", ocrLine);
+console.log("✅ Tarikh Caption:", tarikhCaption);
+console.log("✅ Tarikh OCR:", tarikhOCR);
 
       if (tarikhCaption && tarikhOCR && tarikhCaption === tarikhOCR) {
         await bot.sendMessage(chatId, `✅ Tarikh padan: ${tarikhCaption}`);
