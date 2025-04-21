@@ -54,19 +54,42 @@ async function extractTarikhFromImage(fileUrl) {
 
     const visionRes = await axios.post(endpoint, body);
     const ocrText = visionRes.data.responses[0]?.fullTextAnnotation?.text || "";
-    console.log("🧾 OCR TEXT:\n", ocrText);
+    console.log("📜 OCR TEXT:\n", ocrText);
 
     const cleanText = ocrText.replace(/\n/g, ' ').replace(/\s+/g, ' ');
     const tarikh = detectAndFormatDateFromText(cleanText);
-    return tarikh;
+    return { tarikh, ocrText };
 
   } catch (err) {
     console.error("❌ ERROR OCR:", err.message);
-    return null;
+    return { tarikh: null, ocrText: '' };
   }
 }
 
-// =================== [ STORAGE UNTUK PAIRING ] ===================
+// =================== [ SEMAK RESIT PERBELANJAAN ] ===================
+function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
+  const blacklist = ['watson', 'kfc', 'guardian', 'farmasi'];
+  const lokasiWajib = ['kok lanas', 'ketereh', 'melor'];
+
+  const ocrLower = ocrText.toLowerCase();
+
+  if (tarikhOCR !== tarikhCaption) {
+    return `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR}*\n✍️ Caption: *${tarikhCaption}*`;
+  }
+
+  if (blacklist.some(word => ocrLower.includes(word))) {
+    return `❌ Resit ditolak kerana mengandungi jenama/kedai tidak dibenarkan.`;
+  }
+
+  const lokasiOK = lokasiWajib.some(word => ocrLower.includes(word));
+  if (!lokasiOK) {
+    return `❌ Lokasi tidak sah. Hanya resit dari kawasan tertentu sahaja dibenarkan.`;
+  }
+
+  return `✅ Resit disahkan: *${tarikhOCR}*`;
+}
+
+// =================== [ PAIRING STORAGE ] ===================
 let pendingUploads = {};
 
 // =================== [ FUNGSI 1: Caption Masuk ➜ Padam & Butang ] ===================
@@ -77,10 +100,7 @@ bot.on('message', async (msg) => {
 
   if (!text || msg.photo || msg.document || msg.caption || msg.reply_to_message) return;
 
-  await bot.deleteMessage(chatId, messageId).catch(err => {
-    console.log("❌ Gagal padam mesej asal:", err.message);
-  });
-
+  await bot.deleteMessage(chatId, messageId).catch(() => {});
   await bot.sendMessage(chatId, `*${text}*`, {
     parse_mode: "Markdown",
     reply_markup: {
@@ -103,7 +123,7 @@ bot.on('callback_query', async (query) => {
 
     await bot.answerCallbackQuery({ callback_query_id: query.id });
 
-    const promptMsg = await bot.sendMessage(chatId, `❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚❗️`, {
+    const promptMsg = await bot.sendMessage(chatId, `❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚❗️ `, {
       reply_markup: { force_reply: true },
       reply_to_message_id: messageId
     });
@@ -136,28 +156,25 @@ bot.on('photo', async (msg) => {
   const file = await bot.getFile(fileId);
   const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${file.file_path}`;
 
-  const tarikhOCR = await extractTarikhFromImage(fileUrl);
+  const { tarikh, ocrText } = await extractTarikhFromImage(fileUrl);
   const tarikhCaption = detectAndFormatDateFromText(captionText);
 
   let semakan = '';
-  if (!tarikhOCR || !tarikhCaption) {
-    semakan = `⚠️ Gagal kesan tarikh dalam gambar atau caption.`;
-  } else if (tarikhOCR === tarikhCaption) {
-    semakan = `✅ Tarikh padan: *${tarikhOCR}*`;
+  const jenis = captionText.split('\n')[0].trim().toUpperCase();
+
+  if (jenis.includes("RESIT PERBELANJAAN")) {
+    semakan = semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR: tarikh, tarikhCaption });
   } else {
-    semakan = `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR}*\n✍️ Caption: *${tarikhCaption}*`;
+    semakan = `⚠️ Jenis resit tidak dikenali.`;
   }
 
-  // Format caption: baris pertama bold sahaja
   const lines = captionText.split('\n');
   const formattedCaption = `*${lines[0]}*\n` + lines.slice(1).join('\n');
 
-  // Padam semua mesej lama
   await bot.deleteMessage(chatId, messageId).catch(() => {});
   await bot.deleteMessage(chatId, forceReplyTo).catch(() => {});
   await bot.deleteMessage(chatId, promptMsgId).catch(() => {});
 
-  // Hantar gambar + caption + semakan
   await bot.sendPhoto(chatId, fileId, {
     caption: `${formattedCaption}\n\n${semakan}`,
     parse_mode: "Markdown"
@@ -165,3 +182,4 @@ bot.on('photo', async (msg) => {
 
   delete pendingUploads[userId];
 });
+
