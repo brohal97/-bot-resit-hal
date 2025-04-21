@@ -97,10 +97,16 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
     return `❌ Tarikh tidak padan.`;
   }
 
-  const bankList = ['maybank', 'cimb', 'bank islam', 'rhb', 'ambank', 'bsn', 'agrobank', 'bank muamalat', 'muamalat'];
+  // 2. Semak nama bank (normalize spacing)
+const normalize = str => str.toLowerCase().replace(/\s+/g, '');
 
-const bankOCR = bankList.find(bank => ocrLower.includes(bank));
-const bankCaption = bankList.find(bank => captionLower.includes(bank));
+const bankList = [
+  'maybank', 'cimb', 'bankislam', 'rhb',
+  'ambank', 'bsn', 'agrobank', 'bankmuamalat', 'muamalat'
+];
+
+const bankOCR = bankList.find(bank => normalize(ocrText).includes(bank));
+const bankCaption = bankList.find(bank => normalize(captionText).includes(bank));
 
 if (!bankOCR || !bankCaption || bankOCR !== bankCaption) {
   return `❌ Nama bank tidak padan.`;
