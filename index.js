@@ -88,69 +88,60 @@ function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption
 
   return `✅ Resit disahkan: *${tarikhOCR}*`;
 }
-// =================== [ SEMAK BAYAR KOMISEN – UNTUK SISTEM UTAMA ] ===================
-function semakBayarKomisen(msg, chatId, text) {
-  const caption = msg.caption || msg.text || "";
-  const lines = text.split('\n').map(x => x.trim());
+// =================== [ SEMAK BAYAR KOMISEN – VERSI AKHIR & STABIL ] ===================
+function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
+  const ocrLower = ocrText.toLowerCase();
+  const captionLower = captionText.toLowerCase();
 
-  // Cari tarikh dalam OCR
-  const tarikhJumpa = lines.find(line => isTarikhValid(line));
-  if (!tarikhJumpa) {
-    bot.sendMessage(chatId, "❌ Gagal kesan tarikh dalam gambar.");
-    return;
-  }
-  const hanyaTarikh = formatTarikhStandard(tarikhJumpa);
-
-  // Cari tarikh dalam caption
-  const captionLines = caption.split('\n');
-  const tarikhTeks = captionLines.find(line => isTarikhValid(line));
-  const tarikhDalamTeks = tarikhTeks ? formatTarikhStandard(tarikhTeks) : null;
-
-  if (tarikhDalamTeks !== hanyaTarikh) {
-    bot.sendMessage(chatId, `❌ Tarikh dalam gambar (${hanyaTarikh}) tidak padan dengan teks.`);
-    return;
+  // 1. Semak tarikh
+  if (tarikhOCR !== tarikhCaption) {
+    return `❌ Tarikh tidak padan.`;
   }
 
-  const getValue = (label) => {
-    const regex = new RegExp(label + "\\s*[:：]\\s*(.+)", "i");
-    const match = caption.match(regex);
-    return match ? match[1].trim().toLowerCase() : null;
-  };
-
-  const normalise = (str) => str.replace(/[^0-9a-z]/gi, "").toLowerCase();
-
-  const namaBank = getValue("nama bank");
-  const noAkaun = getValue("no akaun");
-  const total = getValue("total")?.replace(/(rm|myr)?\s?/i, "");
-
-  const ocrClean = text.replace(/[\s,]/g, "").toLowerCase();
-  const gagal = [];
-
-  if (namaBank && !ocrClean.includes(normalise(namaBank))) gagal.push("nama bank");
-  if (noAkaun && !ocrClean.includes(normalise(noAkaun))) gagal.push("no akaun bank");
-
-  const normalizeJumlah = (str) => parseFloat(str.replace(/,/g, '').trim()).toFixed(2);
-  const jumlahPattern = new RegExp(`(rm|myr)?\s*${normalizeJumlah(total)}(\.00)?`, 'i');
-
-  if (total && !text.toLowerCase().match(jumlahPattern)) {
-    gagal.push("jumlah total");
+  // 2. Semak nama bank (normalize spacing)
+  const normalize = str => str.toLowerCase().replace(/\s+/g, '');
+  const bankList = [
+    'maybank', 'cimb', 'bankislam', 'rhb',
+    'ambank', 'bsn', 'agrobank', 'bankmuamalat', 'muamalat'
+  ];
+  const bankOCR = bankList.find(bank => normalize(ocrText).includes(bank));
+  const bankCaption = bankList.find(bank => normalize(captionText).includes(bank));
+  if (!bankOCR || !bankCaption) {
+    return `❌ Nama bank tidak padan.`;
   }
 
-  const semakanStatus = gagal.length
-    ? `❌ BAYAR KOMISEN gagal diluluskan.\nSebab tidak padan: ${gagal.join(", ")}`
-    : `✅ BAYAR KOMISEN LULUS\nTarikh: ${hanyaTarikh}`;
-
-  const photoFileId = msg.photo?.[msg.photo.length - 1]?.file_id;
-  if (photoFileId) {
-    const lines = caption.split('\n');
-    const formattedCaption = `*${lines[0]}*\n` + lines.slice(1).join('\n') + `\n\n${semakanStatus}`;
-    bot.sendPhoto(chatId, photoFileId, {
-      caption: formattedCaption,
-      parse_mode: "Markdown"
-    });
-  } else {
-    bot.sendMessage(chatId, semakanStatus);
+  // 3. Semak nombor akaun (berpandukan caption, cari dalam OCR tanpa spacing)
+  const noAkaunCaption = captionLower.match(/\b\d{6,20}\b/)?.[0];
+  const ocrClean = ocrLower.replace(/\s+/g, '');
+  if (!noAkaunCaption || !ocrClean.includes(noAkaunCaption)) {
+    return `❌ Nombor akaun tidak padan.`;
   }
+
+  // 4. Semak jumlah (normalize dan padankan dari baris TOTAL sahaja dalam caption)
+  function normalizeJumlah(str) {
+    return parseFloat(
+      str.replace(/,/g, '').replace(/(rm|myr)/gi, '').trim()
+    ).toFixed(2);
+  }
+
+  const jumlahOCRraw = ocrLower.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+
+  const captionLines = captionLower.split('\n');
+  const totalLine = captionLines.find(line => /total/.test(line) && /(rm|myr)/.test(line));
+  const jumlahCaptionRaw = totalLine?.match(/(rm|myr)?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+
+  if (!jumlahOCRraw || !jumlahCaptionRaw) {
+    return `❌ Jumlah tidak dapat dipastikan.`;
+  }
+
+  const jumlahOCR = normalizeJumlah(jumlahOCRraw[0]);
+  const jumlahCaption = normalizeJumlah(jumlahCaptionRaw[0]);
+
+  if (jumlahOCR !== jumlahCaption) {
+    return `❌ Jumlah tidak padan.\n📸 Slip: *RM${jumlahOCR}*\n✍️ Caption: *RM${jumlahCaption}*`;
+  }
+
+  return `✅ BAYAR KOMISEN LULUS\nTarikh: ${tarikhCaption}`;
 }
 
 // =================== [ PAIRING STORAGE ] ===================
