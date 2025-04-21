@@ -1,7 +1,6 @@
 require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
-
 const API_KEY = process.env.VISION_API_KEY;
 
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
@@ -118,12 +117,16 @@ bot.on("photo", async (msg) => {
 
   try {
     await bot.sendChatAction(chatId, 'upload_photo');
-
     const imageBuffer = await axios.get(fileUrl, { responseType: 'arraybuffer' }).then(res => Buffer.from(res.data, 'binary'));
 
     await bot.deleteMessage(chatId, msg.message_id);
     await bot.deleteMessage(chatId, replyToMsg.message_id);
     await bot.deleteMessage(chatId, matched.captionMsgId);
+
+    await bot.sendPhoto(chatId, imageBuffer, {
+      caption: formattedCaption,
+      parse_mode: "HTML"
+    });
 
     if (matched.detail.toUpperCase().startsWith("RESIT PERBELANJAAN")) {
       const visionResponse = await axios.post(
@@ -140,7 +143,9 @@ bot.on("photo", async (msg) => {
       const tarikhCaption = cariTarikhDalamText(matched.detail);
       const tarikhOCR = cariTarikhDalamText(ocrText);
 
-      if (!tarikhCaption || !tarikhOCR || tarikhCaption !== tarikhOCR) {
+      if (tarikhCaption && tarikhOCR && tarikhCaption === tarikhOCR) {
+        await bot.sendMessage(chatId, `✅ Tarikh padan: ${tarikhCaption}`);
+      } else {
         await bot.sendMessage(chatId, `❌ Tarikh tidak sepadan.\n📅 Caption: ${tarikhCaption || '❓'}\n🧾 Gambar: ${tarikhOCR || '❓'}`, {
           reply_markup: {
             inline_keyboard: [
@@ -148,14 +153,8 @@ bot.on("photo", async (msg) => {
             ]
           }
         });
-        return;
       }
     }
-
-    await bot.sendPhoto(chatId, imageBuffer, {
-      caption: formattedCaption,
-      parse_mode: "HTML"
-    });
 
     delete pendingUploads[replyToMsg.message_id];
   } catch (e) {
