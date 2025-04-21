@@ -100,9 +100,9 @@ function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
   const bankMatch = /(maybank|cimb|bank islam|rhb|ambank|bsn|agrobank|muamalat)/;
   const bankOCR = ocrLower.match(bankMatch)?.[0];
   const bankCaption = captionLower.match(bankMatch)?.[0];
-  if (!bankOCR || !bankCaption || bankOCR !== bankCaption) {
-    return `❌ Nama bank tidak padan.`;
-  }
+  if (!bankOCR || !bankCaption || bankOCR.replace(/\s+/g, '') !== bankCaption.replace(/\s+/g, '')) {
+  return `❌ Nama bank tidak padan.`;
+}
 
   const noAkaunOCR = ocrLower.match(/\b\d{10,16}\b/);
   const noAkaunCaption = captionLower.match(/\b\d{10,16}\b/);
