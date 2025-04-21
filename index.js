@@ -7,6 +7,7 @@ const visionApiKey = process.env.VISION_API_KEY;
 
 console.log("🤖 BOT AKTIF – Sistem Lengkap Padanan Resit");
 
+// =================== [ Helper: Tarikh Normalizer ] ===================
 const bulanMap = {
   jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
   jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12'
@@ -36,6 +37,7 @@ function detectAndFormatDateFromText(text) {
   return null;
 }
 
+// =================== [ OCR Vision API ] ===================
 async function extractTarikhFromImage(fileUrl) {
   const endpoint = `https://vision.googleapis.com/v1/images:annotate?key=${visionApiKey}`;
 
@@ -52,7 +54,6 @@ async function extractTarikhFromImage(fileUrl) {
 
     const visionRes = await axios.post(endpoint, body);
     const ocrText = visionRes.data.responses[0]?.fullTextAnnotation?.text || "";
-
     console.log("🧾 OCR TEXT:\n", ocrText);
 
     const cleanText = ocrText.replace(/\n/g, ' ').replace(/\s+/g, ' ');
@@ -65,7 +66,7 @@ async function extractTarikhFromImage(fileUrl) {
   }
 }
 
-// ========== [ FUNGSI 1: HANTAR TEKS ➜ PADAM ➜ HANTAR DENGAN BUTANG ] ==========
+// =================== [ FUNGSI 1: Caption Masuk ➜ Padam & Butang ] ===================
 let pendingUploads = {};
 
 bot.on('message', async (msg) => {
@@ -73,16 +74,13 @@ bot.on('message', async (msg) => {
   const messageId = msg.message_id;
   const text = msg.text;
 
-  // Abaikan mesej yang bukan teks biasa
   if (!text || msg.photo || msg.document || msg.caption || msg.reply_to_message) return;
 
-  // Padam mesej asal
   await bot.deleteMessage(chatId, messageId).catch(err => {
     console.log("❌ Gagal padam mesej asal:", err.message);
   });
 
-  // Hantar semula dengan butang
-  const sent = await bot.sendMessage(chatId, `📩 *${text}*`, {
+  await bot.sendMessage(chatId, `📩 *${text}*`, {
     parse_mode: "Markdown",
     reply_markup: {
       inline_keyboard: [
@@ -92,7 +90,7 @@ bot.on('message', async (msg) => {
   });
 });
 
-// ========== [ FUNGSI 2: BILA TEKAN BUTANG – AKTIFKAN FORCE REPLY ] ==========
+// =================== [ FUNGSI 2: Tekan Butang ➜ Force Reply Aktif ] ===================
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const messageId = query.message.message_id;
@@ -114,7 +112,7 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// ========== [ FUNGSI 3: USER REPLY DENGAN GAMBAR ] ==========
+// =================== [ FUNGSI 3: User Reply Gambar ➜ OCR + Gabung + Semakan ] ===================
 bot.on('photo', async (msg) => {
   const userId = msg.from.id;
   const chatId = msg.chat.id;
@@ -128,7 +126,6 @@ bot.on('photo', async (msg) => {
   }
 
   const { captionText, forceReplyTo } = pendingUploads[userId];
-
   const photos = msg.photo;
   const fileId = photos[photos.length - 1].file_id;
 
@@ -138,20 +135,22 @@ bot.on('photo', async (msg) => {
   const tarikhOCR = await extractTarikhFromImage(fileUrl);
   const tarikhCaption = detectAndFormatDateFromText(captionText);
 
+  let semakan = '';
   if (!tarikhOCR || !tarikhCaption) {
-    await bot.sendMessage(chatId, `⚠️ Gagal kesan tarikh dalam gambar atau caption.`, {
-      reply_to_message_id: messageId
-    });
-    return delete pendingUploads[userId];
+    semakan = `⚠️ Gagal kesan tarikh dalam gambar atau caption.`;
+  } else if (tarikhOCR === tarikhCaption) {
+    semakan = `✅ Tarikh padan: *${tarikhOCR}*`;
+  } else {
+    semakan = `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR}*\n✍️ Caption: *${tarikhCaption}*`;
   }
 
-  // Padam gambar dan mesej caption berasingan
+  // Padam mesej asal
   await bot.deleteMessage(chatId, messageId).catch(() => {});
   await bot.deleteMessage(chatId, forceReplyTo).catch(() => {});
 
-  // Hantar semula gambar + caption dalam satu post
+  // Hantar semula sebagai satu post (gambar + caption + hasil semakan)
   await bot.sendPhoto(chatId, fileId, {
-    caption: `📩 ${captionText}`,
+    caption: `📩 ${captionText}\n\n${semakan}`,
     parse_mode: "Markdown"
   });
 
