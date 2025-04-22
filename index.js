@@ -102,7 +102,34 @@ async function extractTarikhFromImage(fileUrl) {
 
 // =================== [ SEMAK RESIT PERBELANJAAN ] ===================
 function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
-  const blacklist = ['watson', 'kfc', 'guardian', 'farmasi'];
+  const blacklist = [
+  // Kosmetik
+  "lip", "matte", "mascara", "eyeliner", "brow", "shadow", "blush",
+  "foundation", "powder", "primer", "concealer", "tint", "highlight", "makeup", "lipstick",
+
+  // Pakaian
+  "top", "tee", "t-shirt", "shirt", "blouse", "dress", "skirt", "pants", "jeans", "shorts",
+  "kurung", "baju", "seluar", "jacket", "hoodie", "sweater", "uniform", "apparel", "clothing", "fashion",
+
+  // Gajet
+  "phone", "smartphone", "laptop", "usb", "printer", "camera", "charger", "cable", "earphone",
+  "mouse", "keyboard", "tempered", "screen protector", "powerbank", "monitor", "speaker", "headphone",
+
+  // Barangan elektrik rumah
+  "rice cooker", "periuk", "air fryer", "kipas", "iron", "kettle", "vacuum", "toaster", "blender",
+  "steamer", "oven", "microwave", "aircond", "heater", "washing machine", "cloth dryer",
+
+  // Farmasi / kesihatan
+  "watsons", "guardian", "sephora", "farmasi", "vitahealth", "alpro", "caring", "big pharmacy",
+  "sunway pharmacy", "sasa", "hermo", "naskeen",
+
+  // Makanan segera
+  "kfc", "mcdonald", "mcd", "pizza hut", "domino", "texas", "ayam penyet", "subway", "marrybrown",
+  "starbucks", "coffee bean", "tealive", "secret recipe", "dunkin", "sushi king", "bbq plaza",
+  "old town", "papa john", "nandos", "a&w", "chatime", "boost juice", "zus coffee", "coolblog",
+  "familymart", "daiso", "emart", "e-mart"
+];
+
   const lokasiWajib = ['kok lanas', 'ketereh', 'melor'];
 
   const ocrLower = ocrText.toLowerCase();
@@ -110,10 +137,10 @@ function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption
   if (tarikhOCR !== tarikhCaption) {
     return `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR}*\n✍️ Caption: *${tarikhCaption}*`;
   }
-
-  if (blacklist.some(word => ocrLower.includes(word))) {
-    return `❌ Resit ditolak kerana mengandungi jenama/kedai tidak dibenarkan.`;
-  }
+  const ocrLower = ocrText.toLowerCase();
+if (blacklist.some(word => ocrLower.includes(word))) {
+  return `❌ Resit mengandungi item/kedai tidak dibenarkan.`;
+}
 
   const lokasiOK = lokasiWajib.some(word => ocrLower.includes(word));
   if (!lokasiOK) {
