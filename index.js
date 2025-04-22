@@ -308,28 +308,6 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-// =================== [ FUNGSI: Handle Manual Lulus & Auto Forward ] ===================
-bot.on('callback_query', async (query) => {
-  const chatId = query.message.chat.id;
-  const messageId = query.message.message_id;
-  const data = query.data;
-
-  if (data === 'manual_lulus') {
-    try {
-      await bot.answerCallbackQuery({ callback_query_id: query.id, text: 'Diluluskan secara manual.' });
-
-      // Auto forward ke channel rasmi
-      const CHANNEL_ID = -1002668586530;
-      await bot.forwardMessage(CHANNEL_ID, chatId, messageId);
-
-      // Padam mesej asal dalam group
-      await bot.deleteMessage(chatId, messageId).catch(() => {});
-    } catch (err) {
-      console.error('❌ Gagal handle manual lulus:', err.message);
-    }
-  }
-});
-
 // =================== [ FUNGSI 1: Caption Masuk ➜ Padam & Butang ] ===================
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
