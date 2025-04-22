@@ -324,10 +324,15 @@ bot.on('callback_query', async (query) => {
 
     await bot.answerCallbackQuery({ callback_query_id: query.id });
 
-    const promptMsg = await bot.sendMessage(chatId, `❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚❗️ `, {
-      reply_markup: { force_reply: true },
-      reply_to_message_id: messageId
-    });
+    const promptMsg = await bot.sendMessage(chatId, `❗️𝐒𝐢𝐥𝐚 𝐇𝐚𝐧𝐭𝐚𝐫 𝐑𝐞𝐬𝐢𝐭 𝐒𝐞𝐠𝐞𝐫𝐚❗️`, {
+  reply_markup: { force_reply: true },
+  reply_to_message_id: messageId
+});
+
+// Padam automatik selepas 10 saat
+setTimeout(() => {
+  bot.deleteMessage(chatId, promptMsg.message_id).catch(() => {});
+}, 10000);
 
     pendingUploads[userId] = {
       captionText,
