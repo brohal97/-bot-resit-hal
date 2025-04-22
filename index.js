@@ -271,6 +271,34 @@ function semakBayarTransport({ ocrText, captionText, tarikhOCR, tarikhCaption })
 
 // =================== [ PAIRING STORAGE ] ===================
 let pendingUploads = {};
+// =================== [ FUNGSI: Handle Manual Lulus & Auto Forward dengan Sekatan Admin ] ===================
+const manualLulusAllowed = [1150078068]; // ← Ganti dengan user_id sebenar nanti
+
+bot.on('callback_query', async (query) => {
+  const chatId = query.message.chat.id;
+  const messageId = query.message.message_id;
+  const data = query.data;
+
+  if (data === 'manual_lulus') {
+    console.log("User tekan butang manual lulus:", query.from.id);
+
+    if (!manualLulusAllowed.includes(query.from.id)) {
+      await bot.answerCallbackQuery({
+        callback_query_id: query.id,
+        text: '❌ Anda tidak dibenarkan luluskan secara manual.',
+        show_alert: true
+      });
+      return;
+    }
+
+    await bot.answerCallbackQuery({ callback_query_id: query.id, text: 'Diluluskan secara manual.' });
+
+    const CHANNEL_ID = -1002668586530;
+    await bot.forwardMessage(CHANNEL_ID, chatId, messageId);
+    await bot.deleteMessage(chatId, message_id).catch(() => {});
+  }
+});
+
 // =================== [ FUNGSI: Handle Manual Lulus & Auto Forward ] ===================
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
