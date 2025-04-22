@@ -272,7 +272,7 @@ function semakBayarTransport({ ocrText, captionText, tarikhOCR, tarikhCaption })
 // =================== [ PAIRING STORAGE ] ===================
 let pendingUploads = {};
 // =================== [ FUNGSI: Handle Manual Lulus dengan Sekatan Akses Penuh ] ===================
-const manualLulusAllowed = [111111111, 222222222]; // ← ganti dengan user_id sebenar
+const manualLulusAllowed = [1150078068]; // ← ganti dengan user_id sebenar
 
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
