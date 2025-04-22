@@ -24,7 +24,7 @@ const bulanMap = {
 };
 
 function detectAndFormatDateFromText(text) {
-  text = text.toLowerCase().replace(/[\.\-]/g, ' ');
+  text = text.toLowerCase().replace(/[\.\-–—‑]/g, ' ');
 
   // Format: 10 Jan 2025 / 10Jan2025
   const regex = /\b(\d{1,2})\s*([a-z]{3,9})\s*(\d{2,4})\b/g;
