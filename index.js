@@ -100,46 +100,50 @@ async function extractTarikhFromImage(fileUrl) {
   }
 }
 
-// =================== [ SEMAK RESIT PERBELANJAAN ] ===================
+// =================== [ SEMAK RESIT PERBELANJAAN – VERSI LENGKAP FINAL ] ===================
 function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
   const blacklist = [
-  // Kosmetik
-  "lip", "matte", "mascara", "eyeliner", "brow", "shadow", "blush",
-  "foundation", "powder", "primer", "concealer", "tint", "highlight", "makeup", "lipstick",
+    // Kosmetik
+    "lip", "matte", "mascara", "eyeliner", "brow", "shadow", "blush",
+    "foundation", "powder", "primer", "concealer", "tint", "highlight", "makeup", "lipstick",
 
-  // Pakaian
-  "top", "tee", "t-shirt", "shirt", "blouse", "dress", "skirt", "pants", "jeans", "shorts",
-  "kurung", "baju", "seluar", "jacket", "hoodie", "sweater", "uniform", "apparel", "clothing", "fashion",
+    // Pakaian
+    "top", "tee", "t-shirt", "shirt", "blouse", "dress", "skirt", "pants", "jeans", "shorts",
+    "kurung", "baju", "seluar", "jacket", "hoodie", "sweater", "uniform", "apparel", "clothing", "fashion",
 
-  // Gajet
-  "phone", "smartphone", "laptop", "usb", "printer", "camera", "charger", "cable", "earphone",
-  "mouse", "keyboard", "tempered", "screen protector", "powerbank", "monitor", "speaker", "headphone",
+    // Gajet
+    "phone", "smartphone", "laptop", "usb", "printer", "camera", "charger", "cable", "earphone",
+    "mouse", "keyboard", "tempered", "screen protector", "powerbank", "monitor", "speaker", "headphone",
 
-  // Barangan elektrik rumah
-  "rice cooker", "periuk", "air fryer", "kipas", "iron", "kettle", "vacuum", "toaster", "blender",
-  "steamer", "oven", "microwave", "aircond", "heater", "washing machine", "cloth dryer",
+    // Barangan elektrik rumah
+    "rice cooker", "periuk", "air fryer", "kipas", "iron", "kettle", "vacuum", "toaster", "blender",
+    "steamer", "oven", "microwave", "aircond", "heater", "washing machine", "cloth dryer",
 
-  // Farmasi / kesihatan
-  "watsons", "guardian", "sephora", "farmasi", "vitahealth", "alpro", "caring", "big pharmacy",
-  "sunway pharmacy", "sasa", "hermo", "naskeen",
+    // Farmasi / kesihatan
+    "watsons", "guardian", "sephora", "farmasi", "vitahealth", "alpro", "caring", "big pharmacy",
+    "sunway pharmacy", "sasa", "hermo", "naskeen",
 
-  // Makanan segera
-  "kfc", "mcdonald", "mcd", "pizza hut", "domino", "texas", "ayam penyet", "subway", "marrybrown",
-  "starbucks", "coffee bean", "tealive", "secret recipe", "dunkin", "sushi king", "bbq plaza",
-  "old town", "papa john", "nandos", "a&w", "chatime", "boost juice", "zus coffee", "coolblog",
-  "familymart", "daiso", "emart", "e-mart"
-];
+    // Makanan segera
+    "kfc", "mcdonald", "mcd", "pizza hut", "domino", "texas", "ayam penyet", "subway", "marrybrown",
+    "starbucks", "coffee bean", "tealive", "secret recipe", "dunkin", "sushi king", "bbq plaza",
+    "old town", "papa john", "nandos", "a&w", "chatime", "boost juice", "zus coffee", "coolblog",
+    "familymart", "daiso", "emart", "e-mart"
+  ];
 
   const lokasiWajib = ['kok lanas', 'ketereh', 'melor'];
-
-  if (tarikhOCR !== tarikhCaption) {
-    return `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR}*\n✍️ Caption: *${tarikhCaption}*`;
-  }
   const ocrLower = ocrText.toLowerCase();
-if (blacklist.some(word => ocrLower.includes(word))) {
-  return `❌ Resit mengandungi item/kedai tidak dibenarkan.`;
-}
 
+  // 1. Semak tarikh
+  if (tarikhOCR !== tarikhCaption) {
+    return `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR || 'null'}*\n✍️ Caption: *${tarikhCaption}*`;
+  }
+
+  // 2. Semak blacklist
+  if (blacklist.some(word => ocrLower.includes(word))) {
+    return `❌ Resit mengandungi item/kedai tidak dibenarkan.`;
+  }
+
+  // 3. Semak lokasi
   const lokasiOK = lokasiWajib.some(word => ocrLower.includes(word));
   if (!lokasiOK) {
     return `❌ Lokasi tidak sah. Hanya resit dari kawasan tertentu sahaja dibenarkan.`;
@@ -147,6 +151,7 @@ if (blacklist.some(word => ocrLower.includes(word))) {
 
   return `✅ Resit disahkan: *${tarikhOCR}*`;
 }
+
 // =================== [ SEMAK BAYAR KOMISEN – VERSI FINAL DENGAN RM/MYR SAHAJA ] ===================
 function semakBayarKomisen({ ocrText, captionText, tarikhOCR, tarikhCaption }) {
   const ocrLower = ocrText.toLowerCase();
