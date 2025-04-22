@@ -271,39 +271,42 @@ function semakBayarTransport({ ocrText, captionText, tarikhOCR, tarikhCaption })
 
 // =================== [ PAIRING STORAGE ] ===================
 let pendingUploads = {};
-// =================== [ FUNGSI: Handle Manual Lulus dengan Sekatan Akses Penuh + Debug ] ===================
-const manualLulusAllowed = [1150078068]; // ← Ganti dengan user_id sebenar
+// =================== [ FUNGSI: Handle Manual Lulus – Versi Stabil Betul-betul Jadi ] ===================
+const manualLulusAllowed = [1150078068]; // Ganti dengan user_id sebenar nanti
 
 bot.on('callback_query', async (query) => {
-  const chatId = query.message.chat.id;
-  const messageId = query.message.message_id;
-  const data = query.data;
+  try {
+    const chatId = query.message.chat.id;
+    const messageId = query.message.message_id;
+    const data = query.data;
 
-  if (data === 'manual_lulus') {
-    console.log("User tekan butang manual lulus:", query.from);
+    if (data !== 'manual_lulus') return;
 
+    console.log("User tekan butang manual lulus:", query.from.id, "-", query.from.first_name);
+
+    // ❌ Staff biasa — hanya alert dan hentikan proses
     if (!manualLulusAllowed.includes(query.from.id)) {
-      console.log("⚠️ Ditolak sebab bukan staff:", query.from.id);
-
       await bot.answerCallbackQuery({
         callback_query_id: query.id,
         text: '❌ Anda tidak dibenarkan luluskan secara manual.',
         show_alert: true
-      }).catch(e => console.log("❌ Gagal popup:", e.message));
+      });
 
-      return; // Penting: Hentikan kod jika user tak dibenarkan
+      return; // 🛑 WAJIB STOP DI SINI
     }
 
-    console.log("✅ Dibenarkan:", query.from.id);
-
+    // ✅ Staff dibenarkan → terus luluskan
     await bot.answerCallbackQuery({
       callback_query_id: query.id,
-      text: 'Diluluskan secara manual.'
+      text: '✅ Diluluskan secara manual.'
     });
 
     const CHANNEL_ID = -1002668586530;
     await bot.forwardMessage(CHANNEL_ID, chatId, messageId);
     await bot.deleteMessage(chatId, messageId).catch(() => {});
+
+  } catch (err) {
+    console.error("❌ Callback query error:", err.message);
   }
 });
 
