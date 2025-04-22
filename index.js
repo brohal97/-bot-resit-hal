@@ -271,8 +271,8 @@ function semakBayarTransport({ ocrText, captionText, tarikhOCR, tarikhCaption })
 
 // =================== [ PAIRING STORAGE ] ===================
 let pendingUploads = {};
-// =================== [ FUNGSI: Handle Manual Lulus dengan Sekatan Akses Penuh ] ===================
-const manualLulusAllowed = [1150078068]; // ← ganti dengan user_id sebenar
+// =================== [ FUNGSI: Handle Manual Lulus dengan Sekatan Akses Penuh + Debug ] ===================
+const manualLulusAllowed = [1150078068]; // ← Ganti dengan user_id sebenar
 
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
@@ -280,18 +280,26 @@ bot.on('callback_query', async (query) => {
   const data = query.data;
 
   if (data === 'manual_lulus') {
-    console.log("User tekan butang manual lulus:", query.from.id);
+    console.log("User tekan butang manual lulus:", query.from);
 
     if (!manualLulusAllowed.includes(query.from.id)) {
+      console.log("⚠️ Ditolak sebab bukan staff:", query.from.id);
+
       await bot.answerCallbackQuery({
         callback_query_id: query.id,
         text: '❌ Anda tidak dibenarkan luluskan secara manual.',
         show_alert: true
-      });
-      return; // ❗ Ini sangat penting
+      }).catch(e => console.log("❌ Gagal popup:", e.message));
+
+      return; // Penting: Hentikan kod jika user tak dibenarkan
     }
 
-    await bot.answerCallbackQuery({ callback_query_id: query.id, text: 'Diluluskan secara manual.' });
+    console.log("✅ Dibenarkan:", query.from.id);
+
+    await bot.answerCallbackQuery({
+      callback_query_id: query.id,
+      text: 'Diluluskan secara manual.'
+    });
 
     const CHANNEL_ID = -1002668586530;
     await bot.forwardMessage(CHANNEL_ID, chatId, messageId);
