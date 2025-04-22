@@ -133,15 +133,15 @@ function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption
   const lokasiWajib = ['kok lanas', 'ketereh', 'melor'];
   const ocrLower = ocrText.toLowerCase();
 
-  // 1. Semak tarikh
-  if (tarikhOCR !== tarikhCaption) {
-    return `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR || 'null'}*\n✍️ Caption: *${tarikhCaption}*`;
-  }
+  // 1. Semak blacklist dulu
+if (blacklist.some(word => ocrLower.includes(word))) {
+  return `❌ Resit mengandungi item/kedai tidak dibenarkan.`;
+}
 
-  // 2. Semak blacklist
-  if (blacklist.some(word => ocrLower.includes(word))) {
-    return `❌ Resit mengandungi item/kedai tidak dibenarkan.`;
-  }
+// 2. Semak tarikh
+if (tarikhOCR !== tarikhCaption) {
+  return `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR || 'null'}*\n✍️ Caption: *${tarikhCaption}*`;
+}
 
   // 3. Semak lokasi
   const lokasiOK = lokasiWajib.some(word => ocrLower.includes(word));
