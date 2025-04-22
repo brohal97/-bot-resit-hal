@@ -344,10 +344,10 @@ bot.on('callback_query', async (query) => {
   reply_to_message_id: messageId
 });
 
-// Padam automatik selepas 10 saat
+// Padam automatik selepas 1 minit
 setTimeout(() => {
   bot.deleteMessage(chatId, promptMsg.message_id).catch(() => {});
-}, 10000);
+}, 60000);
 
     pendingUploads[userId] = {
       captionText,
