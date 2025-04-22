@@ -132,8 +132,6 @@ function semakResitPerbelanjaan({ ocrText, captionText, tarikhOCR, tarikhCaption
 
   const lokasiWajib = ['kok lanas', 'ketereh', 'melor'];
 
-  const ocrLower = ocrText.toLowerCase();
-
   if (tarikhOCR !== tarikhCaption) {
     return `❌ Tarikh tidak padan:\n📸 Gambar: *${tarikhOCR}*\n✍️ Caption: *${tarikhCaption}*`;
   }
