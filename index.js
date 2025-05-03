@@ -427,3 +427,30 @@ if (isLulus) {
 
   delete pendingUploads[userId];
 });
+const express = require('express');
+const app = express();
+app.use(express.json());
+
+// ⬇️ Endpoint khas dari Google Sheets
+app.post('/hantar-caption', async (req, res) => {
+  const { text, groupId } = req.body;
+
+  try {
+    const sent = await bot.sendMessage(groupId, text + '\n\n#trigger_gsheet_caption', {
+      reply_markup: {
+        inline_keyboard: [[{ text: '📸 Upload Resit', callback_data: 'upload_gsheet' }]]
+      }
+    });
+
+    res.status(200).send('✅ Caption dihantar ke Telegram');
+  } catch (error) {
+    console.error('❌ Gagal hantar dari Google Sheets:', error.message);
+    res.status(500).send('❌ Gagal hantar caption');
+  }
+});
+
+// ⬇️ WAJIB untuk Railway / Render
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server aktif di port ${PORT}`);
+});
