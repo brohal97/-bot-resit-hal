@@ -427,35 +427,36 @@ if (isLulus) {
 
   delete pendingUploads[userId];
 });
-const express = require('express');
 const app = express();
 app.use(express.json());
 
-// ⬇️ Endpoint khas dari Google Sheets
 app.post('/hantar-caption', async (req, res) => {
   const { text, groupId } = req.body;
 
+  if (!text || !groupId) {
+    return res.status(400).send("❌ 'text' atau 'groupId' tidak lengkap");
+  }
+
   try {
-    const sent = await bot.sendMessage(groupId, text + '\n\n#trigger_gsheet_caption', {
+    const sent = await bot.sendMessage(groupId, text, { // ❌ buang '#trigger_gsheet_caption'
       reply_markup: {
-        inline_keyboard: [[{ text: '📸 Upload Resit', callback_data: 'upload_gsheet' }]]
+        inline_keyboard: [[{ text: '📸 Upload Resit', callback_data: 'upload_produk' }]] 
       }
     });
 
-    res.status(200).send('✅ Caption dihantar ke Telegram');
-  } catch (error) {
-    console.error('❌ Gagal hantar dari Google Sheets:', error.message);
-    res.status(500).send('❌ Gagal hantar caption');
+    latestCaption = text;
+    originalCaptionMessageId = sent.message_id;
+    waitingForProduk = sent.message_id;
+
+    console.log("✅ Caption dari Google Sheet dihantar:", sent.message_id);
+    res.status(200).send("✅ Caption berjaya dihantar ke Telegram");
+  } catch (err) {
+    console.error("❌ Gagal hantar caption:", err.message);
+    res.status(500).send("❌ Gagal hantar ke Telegram");
   }
 });
 
-// ⬇️ Laluan asas untuk semak server hidup (wajib untuk Railway)
-app.get("/", (req, res) => {
-  res.send("✅ Bot is running.");
-});
-
-// ⬇️ WAJIB untuk Railway / Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server aktif di port ${PORT}`);
+  console.log(`🚀 Express server aktif di port ${PORT}`);
 });
