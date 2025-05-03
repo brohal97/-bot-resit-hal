@@ -449,6 +449,11 @@ app.post('/hantar-caption', async (req, res) => {
   }
 });
 
+// ⬇️ Laluan asas untuk semak server hidup (wajib untuk Railway)
+app.get("/", (req, res) => {
+  res.send("✅ Bot is running.");
+});
+
 // ⬇️ WAJIB untuk Railway / Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
